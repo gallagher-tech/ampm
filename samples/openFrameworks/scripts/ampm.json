@@ -1,0 +1,39 @@
+{
+    "default": {
+        "persistence": {
+            "launchCommand": "../bin/openFrameworks_debug.exe",
+            "maxMemory": 0,
+            "startupTimeout": 15,
+            "heartbeatTimeout": 15
+        },
+        "logging": {
+            "file": {
+                "filename": "logs/server"
+            },
+            "eventFile": {
+                "filename": "logs/event-{date}.tsv"
+            },
+            "screenshots": {
+                "filename": "logs/capture-{date}.jpg"
+            },
+            "loggly": {
+                "tags": ""
+            },
+            "mail": {
+                "enabled": false,
+                "ssl": true,
+                "subject": "ERROR: {hostname}",
+                "level": "error",
+                "host": "smtp.gmail.com",
+                "username": "",
+                "from": "",
+                "password": "",
+                "to": ""
+            },
+            "google": {
+                "enabled": false,
+                "accountId": ""
+            }
+        }
+    }
+}

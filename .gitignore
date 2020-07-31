@@ -31,3 +31,87 @@ Intermediate
 Saved
 MyProject.VC.db
 MyProject.VC.db
+
+#########################
+# IDE
+#########################
+
+#########################
+# IDE
+#########################
+
+# XCode
+*.pbxuser
+*.perspective
+*.perspectivev3
+*.mode1v3
+*.mode2v3
+# XCode 4
+xcuserdata
+*.xcworkspace
+# XCode project files
+*.xcodeproj
+*.plist
+*.xcconfig
+*config.make
+Makefile
+
+# Code::Blocks
+*.depend
+*.layout
+
+# Visual Studio
+*.sdf
+*.opensdf
+*.suo
+*.pdb
+*.ilk
+*.aps
+*.VC.db
+ipch/
+enc_temp_folder/
+# VS project files
+*.sln
+*.vcxproj*
+icon.rc
+
+# Eclipse
+.metadata
+local.properties
+.externalToolBuilders
+
+# Android Studio
+.idea
+.gradle
+gradle
+gradlew
+gradlew.bat
+
+# QtCreator
+*.qbs.user
+*.pro.user
+*.pri
+
+
+#########################
+# openFrameworks patterns
+#########################
+
+
+# build files
+openFrameworks.a
+openFrameworksDebug.a
+openFrameworksUniversal.a
+libs/openFrameworksCompiled/lib/*/*
+!libs/openFrameworksCompiled/lib/*/.gitkeep
+
+# apothecary
+scripts/apothecary/build
+
+# rule to avoid non-official addons going into git
+# see addons/.gitignore
+addons/*
+
+# rule to avoid non-official apps going into git
+# see apps/.gitignore
+apps/*
