@@ -124,6 +124,10 @@ The persistence manager is in chage of starting a process, monitoring it, restar
     // zero (default) to never restart due to lack of heartbeats.
     "heartbeatTimeout": 0,
 
+    // Restart the app if ampm detects the process has exited outside of 
+    // a regular shutdown command
+    "restartOnProcessExit": true,
+
     // Restart the machine after this many app restarts.
     "restartMachineAfter": Infinity,
 
