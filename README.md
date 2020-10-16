@@ -126,7 +126,7 @@ The persistence manager is in chage of starting a process, monitoring it, restar
 
     // Restart the app if ampm detects the process has exited outside of 
     // a regular shutdown command
-    "restartOnProcessExit": true,
+    "restartOnProcessExit": false,
 
     // Restart the machine after this many app restarts.
     "restartMachineAfter": Infinity,
