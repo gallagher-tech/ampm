@@ -36,6 +36,10 @@ exports.Persistence = BaseModel.extend({
         // zero (default) to never restart due to lack of heartbeats.
         heartbeatTimeout: 0,
 
+        // Restart the app if ampm detects the process has exited outside of 
+        // a regular shutdown command
+        restartOnProcessExit: true,
+
         // Restart the machine after this many app restarts.
         restartMachineAfter: Infinity,
 
@@ -411,7 +415,13 @@ exports.Persistence = BaseModel.extend({
             cwd: path.dirname(parts[0])
         })
             .on('exit', _.bind(function() {
+                var pid = this.processId();
                 this._appProcess = null;
+                if (!this._isShuttingDown && this.get('restartOnProcessExit')) {
+                    logger.error('Application (PID ' + pid + ') exited unexpectedly!');
+                    logger.info('Attempting to restart application.');
+                    this.startApp();
+                }
             }, this))
             .on('error', _.bind(function(err) {
                 logger.error('Application could not be started. Is the launchCommand path correct?');
