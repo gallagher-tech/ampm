@@ -8,7 +8,7 @@ var express = require("express"); // Routing framework. http://expressjs.com/
 var session = require("express-session");
 var cookieParser = require("cookie-parser");
 
-var osc = require("node-osc"); // OSC server. https://github.com/TheAlphaNerd/node-osc
+var osc = require("osc"); // OSC server. https://github.com/colinbdclark/osc.js
 var { Server } = require("socket.io"); // Web socket implementation. http://socket.io/
 var ioClient = require("socket.io-client"); // Web socket implementation. http://socket.io/
 var connect = require("connect");
@@ -157,24 +157,42 @@ exports.Network = BaseModel.extend({
     }
 
     //// Set up OSC connection from app.
-    this.transports.oscFromApp = new osc.Server(this.get("oscFromAppPort"));
+    this.transports.oscFromApp = new osc.UDPPort({
+      localAddress: "0.0.0.0", // Changed from "127.0.0.1"
+      localPort: this.get("oscFromAppPort"),
+    });
+
+    // Add a ready listener
+    this.transports.oscFromApp.on("ready", function () {
+      logger.info(
+        "OSC server listening for app messages on port " +
+          this.options.localPort
+      );
+    });
+
+    this.transports.oscFromApp.open();
 
     // handle straight messages
     this.transports.oscFromApp.on(
       "message",
-      _.bind(function (message, info) {
+      _.bind(function (oscMessage, timeTag, info) {
+        // console.log("Received OSC message:", oscMessage, timeTag, info);
         // handle bundles
-        if (message[0] == "#bundle")
-          this._handleOsc(this.transports.oscFromApp, message[2], info);
-        else this._handleOsc(this.transports.oscFromApp, message, info);
+        if (oscMessage.address === "#bundle") {
+          this._handleOsc(this.transports.oscFromApp, oscMessage.packets, info);
+        } else {
+          this._handleOsc(this.transports.oscFromApp, oscMessage, info);
+        }
       }, this)
     );
 
     //// Set up OSC connection to app.
-    this.transports.oscToApp = new osc.Client(
-      "127.0.0.1",
-      this.get("oscToAppPort")
-    );
+    this.transports.oscToApp = new osc.UDPPort({
+      remoteAddress: "127.0.0.1",
+      remotePort: this.get("oscToAppPort"),
+    });
+
+    this.transports.oscToApp.open();
 
     //// Set up socket connection to app.
     // Updated to use modern Socket.IO initialization API
@@ -184,12 +202,12 @@ exports.Network = BaseModel.extend({
 
   // Generic handler to decode and re-post OSC messages as native events.
   _handleOsc: function (transport, message, info) {
-    var e = message[0].replace("/", "");
+    var e = message.address.replace("/", "");
 
     var data = null;
-    if (message[1]) {
+    if (message.args) {
       try {
-        data = JSON.parse(message[1]);
+        data = JSON.parse(message.args[0]);
       } catch (e) {
         logger.warn("OSC messages should be JSON");
       }

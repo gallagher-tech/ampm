@@ -27,7 +27,7 @@ namespace AmpmLib
 		public static event EventHandler<Tuple<string, JSONNode>> OnAmpmMessage;
 
         // The OSC server to receive OSC messages.
-		private static readonly OSCServer _OscReceive;
+		//private static readonly OSCServer _OscReceive;
 
 		// The destination for OSC messages to the local node.js server.
 		private static IPAddress ipAddress;
@@ -37,11 +37,11 @@ namespace AmpmLib
 
 		static AMPM()
 		{
-			// Create a OSC Reciever to receive UDP messages
-			_OscReceive = OSCHandler.Instance.CreateServer("AMPM", 3003);
+   //         // Create a OSC Reciever to receive UDP messages
+   //         _OscReceive = OSCHandler.Instance.CreateServer("AMPM", 3003);
 
-			// Handle incoming OSC messages.
-			_OscReceive.PacketReceivedEvent += Server_MessageReceived;
+			//// Handle incoming OSC messages.
+			//_OscReceive.PacketReceivedEvent += Server_MessageReceived;
 
             ipAddress = GetLocalIPAddress();
             OSCHandler.Instance.CreateClient ("AMPM", ipAddress, 3002); // Creating a client to send messages on
@@ -52,7 +52,7 @@ namespace AmpmLib
             IPHostEntry host;
             try
             {
-                 host = Dns.GetHostEntry(hostName);
+                 host = Dns.GetHostEntry("127.0.0.1");
             }
             catch(System.Net.Sockets.SocketException ex)
             {
