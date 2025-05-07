@@ -20,25 +20,10 @@ var cmd = "nodemon";
 var server = path.join(__dirname, "server.js");
 
 if (process.platform === "win32") {
-  // Gotta go to great lengths to avoid spaces in the path.
-  // https://github.com/nodejs/node-v0.x-archive/issues/25895
-  cmd = child_process
-    .execSync("where nodemon")
-    .toString()
-    .split("\n")[1]
-    .replace("Program Files", "PROGRA~1")
-    .trim();
-  server = child_process
-    .execSync("where ampm")
-    .toString()
-    .split("\n")[1]
-    .replace("Program Files", "PROGRA~1")
-    .trim();
-  server = path.dirname(server);
-  if (server.toLowerCase().indexOf("yarn") !== -1) {
-    server = path.join(server, "..", "config", "global");
-  }
-  server = path.join(server, "node_modules", "ampm", "server.js");
+  // Simplified logic for Windows:
+  cmd = "nodemon.cmd"; // Assumes nodemon.cmd is in PATH
+  // The 'server' path (path.join(__dirname, "server.js")) is already correctly defined above
+  // and is more robust than the previous Windows-specific logic.
 }
 
 if (!fs.existsSync(restartFile)) {
