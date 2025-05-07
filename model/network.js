@@ -196,7 +196,13 @@ exports.Network = BaseModel.extend({
 
     //// Set up socket connection to app.
     // Updated to use modern Socket.IO initialization API
-    this.transports.socketToApp = new Server();
+    this.transports.socketToApp = new Server({
+      cors: {
+        origin: "http://localhost:8000", // Allow requests from your web app's origin
+        methods: ["GET", "POST"],
+        credentials: true, // Allow credentials to be sent
+      },
+    });
     this.transports.socketToApp.listen(this.get("socketToAppPort"));
   },
 
