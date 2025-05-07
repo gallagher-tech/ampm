@@ -1,0 +1,15 @@
+{
+	"name": "ampm-web-sample",
+	"version": "1.0.0",
+	"description": "AMPM Web Sample Frontend",
+	"main": "index.html",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"dependencies": {
+		"jquery": "^3.7.1",
+		"socket.io-client": "^4.7.5",
+		"underscore": "^1.13.6",
+		"backbone": "^1.4.1"
+	}
+}
