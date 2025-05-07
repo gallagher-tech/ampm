@@ -6,15 +6,16 @@ public class AmpmCommunicator : MonoBehaviour {
 
 	// Use this for initialization
 	void OnEnable () {
-		//AMPM.OnConfigLoaded += ParseConfig;
-		//AMPM.GetConfig ();
-		StartHeartBeat();
+		AMPM.OnConfigLoaded += ParseConfig;
+		AMPM.GetConfig();
+		//StartHeartBeat();
 
     }
 
 	void ParseConfig(){ 
 		// do stuff with the configuration
 		StartHeartBeat();
+		// add stuff with needs
 	}
 
 	void StartHeartBeat ()

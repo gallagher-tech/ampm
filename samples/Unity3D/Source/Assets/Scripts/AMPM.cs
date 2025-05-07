@@ -27,7 +27,7 @@ namespace AmpmLib
 		public static event EventHandler<Tuple<string, JSONNode>> OnAmpmMessage;
 
         // The OSC server to receive OSC messages.
-		//private static readonly OSCServer _OscReceive;
+		private static readonly OSCServer _OscReceive;
 
 		// The destination for OSC messages to the local node.js server.
 		private static IPAddress ipAddress;
@@ -37,13 +37,13 @@ namespace AmpmLib
 
 		static AMPM()
 		{
-   //         // Create a OSC Reciever to receive UDP messages
-   //         _OscReceive = OSCHandler.Instance.CreateServer("AMPM", 3003);
+			// Create a OSC Reciever to receive UDP messages
+			_OscReceive = OSCHandler.Instance.CreateServer("AMPM", 3003);
 
-			//// Handle incoming OSC messages.
-			//_OscReceive.PacketReceivedEvent += Server_MessageReceived;
+			// Handle incoming OSC messages.
+			_OscReceive.PacketReceivedEvent += Server_MessageReceived;
 
-            ipAddress = GetLocalIPAddress();
+			ipAddress = GetLocalIPAddress();
             OSCHandler.Instance.CreateClient ("AMPM", ipAddress, 3002); // Creating a client to send messages on
 		}
 
@@ -68,21 +68,30 @@ namespace AmpmLib
             throw new Exception("Local IP Address Not Found!");
         }
         public static void GetConfig(string url = "http://localhost:8888/config") {
-			// load the url
-			string strContent;
-			var webRequest = WebRequest.Create(@url);
-			using (var response = webRequest.GetResponse())
-			using(var content = response.GetResponseStream())
-			using(var reader = new StreamReader(content)){
-				strContent = reader.ReadToEnd();
+			try
+			{
+                // load the url
+                string strContent;
+                var webRequest = WebRequest.Create(@url);
+                using (var response = webRequest.GetResponse())
+                using (var content = response.GetResponseStream())
+                using (var reader = new StreamReader(content))
+                {
+                    strContent = reader.ReadToEnd();
+                }
+
+                // parse it as json
+                _Config = JSON.Parse(strContent);
+
+                // fire OnConfigLoaded
+                if (OnConfigLoaded != null)
+                    OnConfigLoaded();
+            }
+			catch (Exception e)
+			{
+
+				throw;
 			}
-
-			// parse it as json
-			_Config = JSON.Parse(strContent);
-
-			// fire OnConfigLoaded
-			if(OnConfigLoaded!=null)
-				OnConfigLoaded();
 		}
 
 		/// <summary>
