@@ -212,7 +212,6 @@ exports.Network = BaseModel.extend({
 
     var data = null;
     if (message.args) {
-      console.log("OSC message args", message.args[0]);
       // do not try to log if no message is present
       if (!message.args[0]) {
         data = null;

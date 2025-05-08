@@ -7,7 +7,8 @@ var _ = require("lodash"); // Utilities. http://underscorejs.org/
 _.str = require("underscore.string");
 var moment = require("moment"); // Date processing. http://momentjs.com/
 var Backbone = require("backbone"); // Data model utilities. http://backbonejs.org/
-var later = require("later"); // Schedule processing. http://bunkat.github.io/later/
+var cron = require("node-cron"); // Schedule processing.
+var cronParser = require("cron-parser"); // Cron string parsing.
 var execa = require("execa"); // Modern child process execution. https://github.com/sindresorhus/execa
 
 var BaseModel = require("./baseModel.js").BaseModel;
@@ -137,53 +138,48 @@ exports.Persistence = BaseModel.extend({
 
   // Initialize the various cron schedules.
   _initSchedules: function () {
-    // Important to configure later to not use UTC.
-    later.date.localTime();
-
     // Shutdown on schedule.
     if (this.get("shutdownSchedule")) {
-      this._shutdownSchedule = later.parse.cron(this.get("shutdownSchedule"));
       if (this._shutdownInterval) {
-        this._shutdownInterval.clear();
+        this._shutdownInterval.stop();
       }
 
-      this._shutdownInterval = later.setInterval(
+      this._shutdownInterval = cron.schedule(
+        this.get("shutdownSchedule"),
         _.bind(function () {
           logger.info("App shutdown time has arrived. " + new Date());
           this.set("restartCount", 0);
           this.shutdownApp();
         }, this),
-        this._shutdownSchedule
+        { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }
       );
     }
 
-    // Shutdown on schedule.
+    // Shutdown PC on schedule.
     if (this.get("shutdownPcSchedule")) {
-      this._shutdownPcSchedule = later.parse.cron(
-        this.get("shutdownPcSchedule")
-      );
       if (this._shutdownPcInterval) {
-        this._shutdownPcInterval.clear();
+        this._shutdownPcInterval.stop();
       }
 
-      this._shutdownPcInterval = later.setInterval(
+      this._shutdownPcInterval = cron.schedule(
+        this.get("shutdownPcSchedule"),
         _.bind(function () {
           logger.info("Machine shutdown time has arrived. " + new Date());
           this.set("restartCount", 0);
           this.shutdownMachine();
         }, this),
-        this._shutdownPcSchedule
+        { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }
       );
     }
 
     // Start up on schedule.
     if (this.get("startupSchedule")) {
-      this._startupSchedule = later.parse.cron(this.get("startupSchedule"));
       if (this._startupInterval) {
-        this._startupInterval.clear();
+        this._startupInterval.stop();
       }
 
-      this._startupInterval = later.setInterval(
+      this._startupInterval = cron.schedule(
+        this.get("startupSchedule"),
         _.bind(function () {
           logger.info("App startup time has arrived. " + new Date());
           if (!$$serverState.get("runApp")) {
@@ -194,18 +190,18 @@ exports.Persistence = BaseModel.extend({
           this.set("restartCount", 0);
           this.startApp();
         }, this),
-        this._startupSchedule
+        { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }
       );
     }
 
-    // Start up on schedule.
+    // Restart app on schedule.
     if (this.get("restartSchedule")) {
-      this._restartSchedule = later.parse.cron(this.get("restartSchedule"));
       if (this._restartInterval) {
-        this._restartInterval.clear();
+        this._restartInterval.stop();
       }
 
-      this._restartInterval = later.setInterval(
+      this._restartInterval = cron.schedule(
+        this.get("restartSchedule"),
         _.bind(function () {
           if (this._isStartingUp || this._isShuttingDown) {
             return;
@@ -220,37 +216,74 @@ exports.Persistence = BaseModel.extend({
           this.set("restartCount", 0);
           this.restartApp();
         }, this),
-        this._restartSchedule
+        { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }
       );
     }
 
     // Restart machine on schedule.
     if (this.get("restartPcSchedule")) {
-      this._restartPcSchedule = later.parse.cron(this.get("restartPcSchedule"));
       if (this._restartPcInterval) {
-        this._restartPcInterval.clear();
+        this._restartPcInterval.stop();
       }
 
-      this._restartPcInterval = later.setInterval(
+      this._restartPcInterval = cron.schedule(
+        this.get("restartPcSchedule"),
         _.bind(function () {
           logger.info("Machine restart time has arrived. " + new Date());
 
           this.restartMachine();
         }, this),
-        this._restartPcSchedule
+        { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }
       );
     }
   },
 
   // Determine whether the app should be running, based on the cron schedules.
   _shouldBeRunning: function () {
-    if (!this._startupSchedule || !this._shutdownSchedule) {
+    var startupCron = this.get("startupSchedule");
+    var shutdownCron = this.get("shutdownSchedule");
+
+    if (!startupCron || !shutdownCron) {
       return true;
     }
 
-    var lastStartup = later.schedule(this._startupSchedule).prev().getTime();
-    var lastShutdown = later.schedule(this._shutdownSchedule).prev().getTime();
-    return lastStartup > lastShutdown;
+    try {
+      const options = { tz: Intl.DateTimeFormat().resolvedOptions().timeZone };
+      var lastStartup = cronParser
+        .parseExpression(startupCron, options)
+        .prev()
+        .toDate()
+        .getTime();
+      var lastShutdown = cronParser
+        .parseExpression(shutdownCron, options)
+        .prev()
+        .toDate()
+        .getTime();
+      return lastStartup > lastShutdown;
+    } catch (err) {
+      // Use logger if available, otherwise console.error
+      if (typeof logger !== "undefined" && logger.error) {
+        logger.error(
+          "Error parsing cron expression in _shouldBeRunning: " +
+            err +
+            " StartupCron: " +
+            startupCron +
+            " ShutdownCron: " +
+            shutdownCron
+        );
+      } else {
+        console.error(
+          "Error parsing cron expression in _shouldBeRunning: " +
+            err +
+            " StartupCron: " +
+            startupCron +
+            " ShutdownCron: " +
+            shutdownCron
+        );
+      }
+      // Default to true if parsing fails to avoid unintended shutdowns
+      return true;
+    }
   },
 
   // Handle heartbeat messages from the app.
