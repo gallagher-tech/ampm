@@ -13,7 +13,6 @@ var { Server } = require("socket.io"); // Web socket implementation. http://sock
 var ioClient = require("socket.io-client"); // Web socket implementation. http://socket.io/
 var connect = require("connect");
 var passport = require("passport");
-var passportSocketIo = require("passport.socketio");
 var DigestStrategy = require("passport-http").DigestStrategy;
 
 var BaseModel = require("./baseModel.js").BaseModel;
@@ -137,23 +136,31 @@ exports.Network = BaseModel.extend({
     this.transports.socketToConsole = new Server(this.transports.webServer);
 
     if ($$config.permissions) {
-      // Yet more auth stuff.
-      this.transports.socketToConsole.use(
-        passportSocketIo.authorize({
-          cookieParser: cookieParser,
-          key: "sessionId",
-          secret: secret,
-          store: store,
-          success: function (data, accept) {
-            logger.info("Socket access authorized for user", data.user);
-            accept(null, true);
-          },
-          fail: function (data, message, error, accept) {
-            logger.info("Socket access unauthorized.", message, error);
-            accept(null, false);
-          },
-        })
-      );
+      // Replaced passport.socketio with custom middleware
+      const wrap = middleware => (socket, next) => middleware(socket.request, {}, next);
+
+      // Use the same session middleware that Express is using
+      const sessionMiddleware = session({
+        store: store,
+        key: "sessionId", // Make sure this matches the key used in Express session
+        secret: secret, // Make sure this matches the secret used in Express session
+        resave: false,
+        saveUninitialized: false // Typically false if you want to avoid empty sessions
+      });
+
+      this.transports.socketToConsole.use(wrap(sessionMiddleware));
+      this.transports.socketToConsole.use(wrap(passport.initialize()));
+      this.transports.socketToConsole.use(wrap(passport.session()));
+
+      this.transports.socketToConsole.use((socket, next) => {
+        if (socket.request.user) {
+          logger.info("Socket access authorized for user", socket.request.user);
+          next();
+        } else {
+          logger.info("Socket access unauthorized.");
+          next(new Error("unauthorized"));
+        }
+      });
     }
 
     //// Set up OSC connection from app.
