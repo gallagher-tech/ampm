@@ -8,7 +8,7 @@ _.str = require("underscore.string");
 var moment = require("moment"); // Date processing. http://momentjs.com/
 var Backbone = require("backbone"); // Data model utilities. http://backbonejs.org/
 var later = require("later"); // Schedule processing. http://bunkat.github.io/later/
-var spawn = require("superspawn").spawn; // https://www.npmjs.com/package/superspawn
+var execa = require("execa"); // Modern child process execution. https://github.com/sindresorhus/execa
 
 var BaseModel = require("./baseModel.js").BaseModel;
 
@@ -262,14 +262,17 @@ exports.Persistence = BaseModel.extend({
       logger.info("App started.");
 
       if (this.get("postLaunchCommand")) {
-        spawn(
-          this.get("postLaunchCommand"),
-          null,
-          null,
-          function (err, output) {
-            console.log(err, output);
-          }
-        );
+        execa
+          .command(this.get("postLaunchCommand"))
+          .then(function (result) {
+            // Original callback was function(err, output) where output was stdout
+            // On success, err is null.
+            console.log(null, result.stdout);
+          })
+          .catch(function (error) {
+            // On error, err is the error object. error.stdout contains any stdout.
+            console.log(error, error.stdout);
+          });
       }
 
       if (this._startupCallback) {
