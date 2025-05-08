@@ -137,7 +137,8 @@ exports.Network = BaseModel.extend({
 
     if ($$config.permissions) {
       // Replaced passport.socketio with custom middleware
-      const wrap = middleware => (socket, next) => middleware(socket.request, {}, next);
+      const wrap = (middleware) => (socket, next) =>
+        middleware(socket.request, {}, next);
 
       // Use the same session middleware that Express is using
       const sessionMiddleware = session({
@@ -145,7 +146,7 @@ exports.Network = BaseModel.extend({
         key: "sessionId", // Make sure this matches the key used in Express session
         secret: secret, // Make sure this matches the secret used in Express session
         resave: false,
-        saveUninitialized: false // Typically false if you want to avoid empty sessions
+        saveUninitialized: false, // Typically false if you want to avoid empty sessions
       });
 
       this.transports.socketToConsole.use(wrap(sessionMiddleware));

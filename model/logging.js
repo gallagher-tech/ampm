@@ -186,18 +186,24 @@ exports.Logging = BaseModel.extend({
       });
 
       const mailOptions = {
-        to: this.get("mail").to,
-        from: this.get("mail").from,
-        host: this.get("mail").host,
-        username: this.get("mail").username,
-        password: this.get("mail").password,
-        subject: subject,
-        ssl: this.get("mail").ssl,
+        transportOptions: {
+          host: this.get("mail").host,
+          auth: {
+            user: this.get("mail").username,
+            pass: this.get("mail").password,
+          },
+          secure: this.get("mail").ssl,
+        },
+        messageOptions: {
+          to: this.get("mail").to,
+          from: this.get("mail").from,
+          subject: subject,
+        },
         level: this.get("mail").level,
       };
 
       try {
-        const Mail = require("winston-mail").Mail;
+        const Mail = require("winston-mail-lite"); // Corrected import
         logger.add(new Mail(mailOptions));
       } catch (e) {
         console.error("Failed to initialize mail transport:", e);
