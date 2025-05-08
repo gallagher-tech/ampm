@@ -16,15 +16,7 @@ var appPath = path.dirname(configFile);
 var restartFile = path.join(appPath, "ampm-restart.json");
 var stateFile = path.join(appPath, "ampm-state.json");
 var mode = process.argv[3] || "default";
-var cmd = "nodemon";
 var server = path.join(__dirname, "server.js");
-
-if (process.platform === "win32") {
-  // Simplified logic for Windows:
-  cmd = "nodemon.cmd"; // Assumes nodemon.cmd is in PATH
-  // The 'server' path (path.join(__dirname, "server.js")) is already correctly defined above
-  // and is more robust than the previous Windows-specific logic.
-}
 
 if (!fs.existsSync(restartFile)) {
   fs.writeFileSync(restartFile, "");
@@ -55,8 +47,12 @@ process.argv.slice(4).forEach(function (a, i) {
 });
 
 function start() {
-  var ampm = child_process.spawn(cmd, args, {
+  var npxExecutable = "npx"; // Use npx to avoid platform specific issues with nodemon
+  var commandAndArgs = ["nodemon"].concat(args);
+
+  var ampm = child_process.spawn(npxExecutable, commandAndArgs, {
     stdio: "inherit",
+    shell: process.platform === "win32", // Still useful for npx on Windows
   });
   ampm.on("close", start);
 }
