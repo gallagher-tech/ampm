@@ -5,7 +5,7 @@
 
 ** WARNING: All changes are currently WIP **
 
-Currently maintained by G&A. ampm is [Stimulant's](http://stimulant.com) tool for monitoring public-facing software that needs to run 24/7. It does a bunch of things:
+ampm is [Stimulant's](http://stimulant.com) tool for monitoring public-facing software that needs to run 24/7. It does a bunch of things:
 
 - Launches an application and restarts it when it crashes, leaks, or whenever you want it to.
 - Provides application configuration, and applies different settings for different environments.
@@ -13,7 +13,16 @@ Currently maintained by G&A. ampm is [Stimulant's](http://stimulant.com) tool fo
 - (no longer supported) Makes it easy to integrate Google Analytics with an application.
 - Provides hooks for custom server-side logic and ways for multiple instances of an app to communicate.
 - Provides a mobile-friendly web panel which displays app status and controls.
-- Supports any application type that can speak websockets or OSC. There are [samples](https://github.com/stimulant/ampm/tree/master/samples) for [web apps](https://github.com/stimulant/ampm/tree/master/samples/web), [WPF](https://github.com/stimulant/ampm/tree/master/samples/WPF), [Cinder](https://github.com/stimulant/ampm/tree/master/samples/Cinder), [Unity](https://github.com/stimulant/ampm/tree/master/samples/Unity3D), and [Processing](https://github.com/stimulant/ampm/tree/master/samples/processing).
+- Supports any application type that can speak websockets or OSC. There are samples for Web app, Unity, and oF for now.
+
+V2
+Fork currently maintained by G&A.
+
+- Works with Node v22
+- Dependencies are updated
+- Process monitering, heartbeat, logging and emailing are tested working
+- Google Analytics is no longer supported
+- Samples updated
 
 <p align="center">
   <img src="https://github.com/stimulant/ampm/blob/master/console.png?raw=true" width="500"/>
@@ -133,7 +142,7 @@ The persistence manager is in chage of starting a process, monitoring it, restar
     // zero (default) to never restart due to lack of heartbeats.
     "heartbeatTimeout": 0,
 
-    // Restart the app if ampm detects the process has exited outside of 
+    // Restart the app if ampm detects the process has exited outside of
     // a regular shutdown command
     "restartOnProcessExit": false,
 
