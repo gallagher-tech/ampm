@@ -19,30 +19,7 @@ Tested working with Unity 2022.3.31f1
 
 ## Download In-game Debug Console for Unity 3D 
 
-There are 5 ways to install this plugin, just <u>choose 1<u>:
-
-Option 1: Import [IngameDebugConsole.unitypackage](https://github.com/yasirkula/UnityIngameDebugConsole/releases) via Assets-Import Package
-
-Option 2: Clone/download [UnityIngameDebugConsole Repository](https://github.com/yasirkula/UnityIngameDebugConsole) and move the Plugins folder to your Unity project's Assets folder
-
-Option 3: Import it from [Asset Store](https://assetstore.unity.com/packages/tools/gui/in-game-debug-console-68068)
-
-Option 4: (via Package Manager) click the + button and install the package from the following git URL:
-https://github.com/yasirkula/UnityIngameDebugConsole.git
-
-Option 5: (via [OpenUPM](https://openupm.com/)) after installing [openupm-cli](https://github.com/openupm/openupm-cli), run the following command:
-openupm add com.yasirkula.ingamedebugconsole
-
-For more info, visit the [UnityIngameDebugConsole Repository](https://github.com/yasirkula/UnityIngameDebugConsole)
-
-
-## To run the sample
-
-- Within the Unity3D folder, make a new directory called "Build"
-- Build the project to "Build" directory
-- Copy the file ampm.json to the "Build" directory. Edit the ampm.json file so that the "launchCommand" property holds the name of your build file.
-- From a command line window navigate to the "Build" directory and run `ampm` to run in production mode, or `ampm ampm.json dev` to run in dev mode.
-- Make sure the Unity window that opens up is active (ie. you should not have any other tabs open in front of the Unity window)
+Install the "In-game Debug Console" for Unity 3D by following the instructions in this [GitHub Repository](https://github.com/yasirkula/UnityIngameDebugConsole).
 
 
 ## How to integrate AMPM with your Unity3D Application:
@@ -52,7 +29,10 @@ For more info, visit the [UnityIngameDebugConsole Repository](https://github.com
 - Build the file to a directory.
 
 
-## To start the app with AMPM
+## Start the app with AMPM
 
-- Copy the file ampm.json to the same directory as the unity build. Edit the ampm.json file so that the "launchCommand" property holds the name of your build file.
-- From a command line window navigate to your "Build" directory and run `ampm` to run in production mode, or `ampm ampm.json dev` to run in dev mode.
+- Within the Unity3D folder, make a new directory called "Build"
+- Build the project to "Build" directory
+- Copy the file ampm.json to the "Build" directory. Edit the ampm.json file so that the "launchCommand" property holds the name of your build file.
+- From a command line window navigate to the "Build" directory and run `ampm` to run in production mode, or `ampm ampm.json dev` to run in dev mode.
+- Make sure the Unity window that opens up is active (ie. you should not have any other tabs open in front of the Unity window)
