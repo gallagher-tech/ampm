@@ -2,7 +2,7 @@
 
 ## Build an OpenFrameworks app
 - Make sure you have [OpenFrameworks](https://openframeworks.cc/download/) downloaded. 
-- Go to your openFrameworks directory
+- Go to the openFrameworks directory, which you just downloaded.
 - In openFrameworks/projectGenerator, run projectGenerator.exe. 
 - In projectGenerator, select the directory that this README file is saved in (ie. Users > Your Username > Downloads > ampm > samples > openFrameworks)
 - Click "Generate" to create the .sln and bin/ folders
