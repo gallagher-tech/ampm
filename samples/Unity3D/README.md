@@ -34,5 +34,5 @@ Install the "In-game Debug Console" for Unity 3D by following the instructions i
 - Within the Unity3D folder, make a new directory called "Build"
 - Build the project to "Build" directory
 - Copy the file ampm.json to the "Build" directory. Edit the ampm.json file so that the "launchCommand" property holds the name of your build file.
-- From a command line window navigate to the "Build" directory and run `ampm` to run in production mode, or `ampm ampm.json dev` to run in dev mode.
+- From a command line window navigate to the same directory as this README and run `ampm` to run in production mode, or `ampm ampm.json dev` to run in dev mode.
 - Make sure the Unity window that opens up is active (ie. you should not have any other tabs open in front of the Unity window)
