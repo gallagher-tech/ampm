@@ -252,11 +252,11 @@ The logging module sends logs from ampm and the application being monitored to a
         "ssl": false, // Whether to use SSL.
         "subject": "ERROR: {hostname}", // The subject of the emails. "{hostname}" is replaced by the output of os.hostname(). Paths to anything in the config object can be used as well.
         "level": "error", // The logging level to write: info, warn, error.
-        "host": "", // The SMTP server to use.
-        "username": "", // The account to log in with.
-        "from": "", // Where the emails should appear to be from.
-        "password": "", // The password to log in with.
-        "to": "" // Where the emails should go.
+        "host": "", // The SMTP server to use. eg. smtp.gmail.com
+        "username": "", // The email address to log in with.
+        "from": "", // The email address of the sender
+        "password": "", // The password to log in with. You'll need to set up an app password
+        "to": "" // The email address where the emails should go
     },
 
     "cacheAmount": 20 // How many lines of logs and events to show in the web console.
