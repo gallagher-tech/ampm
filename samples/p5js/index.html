@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>ampm template</title>
+
+    <script src="node_modules/jquery/dist/jquery.min.js"></script>
+    <script src="node_modules/underscore/underscore-min.js"></script>
+    <script src="node_modules/backbone/backbone-min.js"></script>
+    <!-- Added Backbone.js -->
+    <script src="node_modules/socket.io-client/dist/socket.io.js"></script>
+    <script type="text/javascript" src="libs/ampm.js"></script>
+    <script type="text/javascript" src="app/app.js"></script>
+    <script type="text/javascript" src="app/model.js"></script>
+    <script type="text/javascript" src="app/models/someModel.js"></script>
+    <script type="text/javascript" src="app/view.js"></script>
+    <script type="text/javascript" src="app/views/someView.js"></script>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+
+    <!-- for p5.js -->
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.7/lib/p5.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.11.7/lib/addons/p5.sound.min.js"></script>
+    <script src="sketch.js"></script>
+
+    <script>
+      $(document).ready(function () {
+        APP.initialize();
+      });
+    </script>
+  </head>
+  <body>
+    <!-- <p>
+      <button id="crash">crash</button>
+      <button id="hang">hang</button>
+      <button id="log">log</button>
+      <button id="event">event</button>
+      <button id="console">console</button>
+      <button id="restart">restart</button>
+    </p> -->
+    <!-- <pre id="config"></pre> -->
+  </body>
+</html>
