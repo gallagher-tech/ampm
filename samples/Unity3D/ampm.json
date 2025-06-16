@@ -3,8 +3,8 @@
 		"persistence": {
 			"launchCommand": "./Build/UnitySample.exe",
 			"maxMemory": 0,
-			"startupTimeout": 10,
-			"heartbeatTimeout": 5
+			"startupTimeout": 0,
+			"heartbeatTimeout": 0
 		},
 		"permissions": {
 			"username": {
