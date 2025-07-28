@@ -15,7 +15,7 @@ var connect = require("connect");
 var passport = require("passport");
 var DigestStrategy = require("passport-http").DigestStrategy;
 
-var BaseModel = require("./baseModel.js").BaseModel;
+var BaseModel = require("./baseModel.cjs").BaseModel;
 
 // Initialize and manage the various network transports.
 exports.Network = BaseModel.extend({

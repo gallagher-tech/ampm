@@ -11,7 +11,7 @@ var cron = require("node-cron"); // Schedule processing.
 var cronParser = require("cron-parser"); // Cron string parsing.
 var execa = require("execa"); // Modern child process execution. https://github.com/sindresorhus/execa
 
-var BaseModel = require("./baseModel.js").BaseModel;
+var BaseModel = require("./baseModel.cjs").BaseModel;
 
 // Startup and shutdown the app on demand and on schedule.
 exports.Persistence = BaseModel.extend({

@@ -2,7 +2,7 @@ var _ = require("lodash"); // Utilities. http://underscorejs.org/
 var fs = require("fs-extra"); // Enhanced file system with recursive directory creation. https://github.com/jprichardson/node-fs-extra
 var path = require("path");
 
-var BaseModel = require("./baseModel.js").BaseModel;
+var BaseModel = require("./baseModel.cjs").BaseModel;
 
 // A state object which persists across server restarts.
 exports.ServerState = BaseModel.extend({

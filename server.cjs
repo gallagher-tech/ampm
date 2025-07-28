@@ -7,12 +7,12 @@ var _ = require("lodash"); // Utilities. http://underscorejs.org/
 var child_process = require("child_process"); // http://nodejs.org/api/child_process.html
 var json = require("comment-json"); // https://www.npmjs.com/package/comment-json
 
-var ConsoleState = require("./model/consoleState.js").ConsoleState;
-var BaseModel = require("./model/baseModel.js").BaseModel;
-var Network = require("./model/network.js").Network;
-var Persistence = require("./model/persistence.js").Persistence;
-var ServerState = require("./model/serverState.js").ServerState;
-var Logging = require("./model/logging.js").Logging;
+var ConsoleState = require("./model/consoleState.cjs").ConsoleState;
+var BaseModel = require("./model/baseModel.cjs").BaseModel;
+var Network = require("./model/network.cjs").Network;
+var Persistence = require("./model/persistence.cjs").Persistence;
+var ServerState = require("./model/serverState.cjs").ServerState;
+var Logging = require("./model/logging.cjs").Logging;
 
 global.$$config = {};
 
@@ -94,6 +94,7 @@ console.log("Server starting up.");
 global.$$plugin = null;
 if ($$config.plugin && fs.existsSync($$config.plugin)) {
   var plugin = require(path.resolve($$config.plugin)).Plugin;
+
   global.$$plugin = new plugin();
 }
 

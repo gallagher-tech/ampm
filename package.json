@@ -47,5 +47,5 @@
 	"overrides": {
 		"axios": "^1.9.0"
 	},
-	"type": "commonjs"
+	"type": "module"
 }

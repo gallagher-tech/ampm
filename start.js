@@ -6,17 +6,18 @@
 // Really should be using nodemon as a module, but:
 // https://github.com/stimulant/ampm/issues/12
 
-var path = require("path");
-var child_process = require("child_process");
-var fs = require("fs");
+import path from "path";
+import child_process from "child_process";
+import fs from "fs";
 
+const __dirname = path.resolve();
 var configFiles = process.argv[2] || "ampm.json";
 var configFile = path.resolve(configFiles.split(",")[0]);
 var appPath = path.dirname(configFile);
 var restartFile = path.join(appPath, "ampm-restart.json");
 var stateFile = path.join(appPath, "ampm-state.json");
 var mode = process.argv[3] || "default";
-var server = path.join(__dirname, "server.js");
+var server = path.join(__dirname, "server.cjs");
 
 if (!fs.existsSync(restartFile)) {
   fs.writeFileSync(restartFile, "");

@@ -10,7 +10,7 @@ var winston = require("winston"); // Logging. https://github.com/flatiron/winsto
 var fs = require("fs-extra"); // Enhanced file system with recursive directory creation. https://github.com/jprichardson/node-fs-extra
 var ua = require("universal-analytics"); // Google Analytics. https://npmjs.org/package/universal-analytics
 
-var BaseModel = require("./baseModel.js").BaseModel;
+var BaseModel = require("./baseModel.cjs").BaseModel;
 
 // Initialize and manage the various loggers.
 exports.Logging = BaseModel.extend({

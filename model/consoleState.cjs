@@ -6,7 +6,7 @@ var moment = require("moment"); // Date processing. http://momentjs.com/
 var child_process = require("child_process"); // http://nodejs.org/api/child_process.html
 var XRegExp = require("xregexp"); // Fancy regular expressions. http://xregexp.com/
 
-var BaseModel = require("./baseModel.js").BaseModel;
+var BaseModel = require("./baseModel.cjs").BaseModel;
 
 // Manager of state which is displayed on the console, and responder of commands sent from the
 // console.
