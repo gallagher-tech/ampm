@@ -1,7 +1,7 @@
 {
 	"default": {
 		"persistence": {
-			"launchCommand": "'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' --kiosk --incognito --disable-pinch --overscroll-history-navigation=0 http://localhost:8000/",
+			"launchCommand": "'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' --kiosk --incognito --disable-pinch --overscroll-history-navigation=0 http://localhost:3000/",
 			"maxMemory": 0,
 			"startupTimeout": 10,
 			"heartbeatTimeout": 5
@@ -30,14 +30,14 @@
 				"enabled": false
 			}
 		},
-		"plugin": "server/server.js",
+		"plugin": "index.js",
 		"customConfig:": {
 			"foo:": "bar"
 		}
 	},
 	"dev": {
 		"persistence": {
-			"launchCommand": "'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe' --incognito --disable-pinch --overscroll-history-navigation=0 http://localhost:8000/",
+			"launchCommand": "'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' --kiosk --incognito --disable-pinch --overscroll-history-navigation=0 http://localhost:5143/",
 			"maxMemory": 0,
 			"startupTimeout": 0,
 			"heartbeatTimeout": 0
@@ -65,12 +65,12 @@
 	},
 	"mac": {
 		"persistence": {
-			"launchCommand": "/Applications/Chromium.app/Contents/MacOS/Chromium --kiosk --incognito --disable-pinch --overscroll-history-navigation=0 http://localhost:8000"
+			"launchCommand": "/Applications/Chromium.app/Contents/MacOS/Chromium --kiosk --incognito --disable-pinch --overscroll-history-navigation=0 http://localhost:3000"
 		}
 	},
 	"dev.mac": {
 		"persistence": {
-			"launchCommand": "/Applications/Chromium.app/Contents/MacOS/Chromium --incognito --disable-pinch --overscroll-history-navigation=0 http://localhost:8000"
+			"launchCommand": "/Applications/Chromium.app/Contents/MacOS/Chromium --incognito --disable-pinch --overscroll-history-navigation=0 http://localhost:3000"
 		}
 	}
 }

@@ -23,6 +23,7 @@ Fork currently maintained by G&A.
 - Process monitering, heartbeat, logging and emailing are tested working
 - Google Analytics is no longer supported
 - Samples updated
+- Updated for 'impprt'/module use
 
 <p align="center">
   <img src="https://github.com/stimulant/ampm/blob/master/console.png?raw=true" width="500"/>

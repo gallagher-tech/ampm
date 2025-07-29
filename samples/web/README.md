@@ -1,13 +1,20 @@
-## ampm web sample
+# AMPM Sample Project
 
-From the server directory, run:
-
+cd `/cient`
 `npm install`
 
-Then, from this directory, run:
+for dev: `npm run dev`
 
-`npm install` for all the dependencies.
+for prod: `npm build`
 
-`ampm` - to load the default ampm.json file and run in the default (live) mode.
 
-`ampm ampm.json dev` - to load the ampm.json file, but run in dev mode.
+---
+
+
+cd `/server`
+`npm install`
+
+(run dev server from `/client` as well with `npm run dev`)
+for dev: `ampm ampm.json dev` or `ampm ampm.json mac.dev`
+
+for prod: `ampm` or `ampm ampm.json mac`
