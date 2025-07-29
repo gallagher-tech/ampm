@@ -10,7 +10,7 @@
 	},
 	"preferGlobal": true,
 	"bin": {
-		"ampm": "start.js"
+		"ampm": "start.cjs"
 	},
 	"engines": {
 		"node": ">=16.0.0"

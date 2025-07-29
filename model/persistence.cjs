@@ -489,6 +489,7 @@ exports.Persistence = BaseModel.extend({
     this._appProcess = child_process
       .spawn(parts[0], parts.slice(1), {
         cwd: path.dirname(parts[0]),
+        shell: true,
       })
       .on(
         "exit",
@@ -522,6 +523,7 @@ exports.Persistence = BaseModel.extend({
     this._sideProcess = child_process
       .spawn(parts[0], parts.slice(1), {
         cwd: path.dirname(parts[0]),
+        shell: true
       })
       .on(
         "exit",

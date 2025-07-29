@@ -6,11 +6,10 @@
 // Really should be using nodemon as a module, but:
 // https://github.com/stimulant/ampm/issues/12
 
-import path from "path";
-import child_process from "child_process";
-import fs from "fs";
+const path = require("path");
+const child_process = require("child_process");
+const fs = require("fs");
 
-const __dirname = path.resolve();
 var configFiles = process.argv[2] || "ampm.json";
 var configFile = path.resolve(configFiles.split(",")[0]);
 var appPath = path.dirname(configFile);
