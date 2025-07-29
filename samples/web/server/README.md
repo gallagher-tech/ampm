@@ -25,8 +25,8 @@ Commands available:
 
 - **Production mode** `npm run start`
 
-- **Deploy: ampm startup and monitoring command (starts the server and opens and monitors a browser window)** `ampm`
-   - to deploy dev or mac or another config: `ampm ampm.json dev`
+- **Deploy: ampm startup and monitoring command (starts the server and opens and monitors a browser window)** `./node_modules/.bin/ampm`
+   - to deploy dev or mac or another config: `./node_modules/.bin/ampm ampm.json dev`
 
 ---
 
