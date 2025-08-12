@@ -13,7 +13,7 @@
 		"ampm": "start.cjs"
 	},
 	"engines": {
-		"node": ">=16.0.0"
+		"node": ">=22.13.1"
 	},
 	"dependencies": {
 		"async": "^3.2.4",
