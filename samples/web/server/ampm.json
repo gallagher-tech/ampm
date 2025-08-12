@@ -1,0 +1,70 @@
+{
+	"default": {
+		"persistence": {
+			"launchCommand": ".\\bin\\chrome_kiosk.cmd",
+			"maxMemory": 0,
+			"startupTimeout": 10,
+			"heartbeatTimeout": 5
+		},
+		"permissions": {
+			"username": {
+				"password": "password",
+				"app": true,
+				"computer": true
+			}
+		},
+		"logging": {
+			"file": {
+				"filename": "logs/server"
+			},
+			"eventFile": {
+				"filename": "logs/event-{date}.tsv"
+			},
+			"screenshots": {
+				"filename": "logs/capture-{date}.jpg"
+			},
+			"loggly": {
+				"tags": "ampm-samples"
+			},
+			"mail": {
+				"enabled": false
+			}
+		},
+		"plugin": "index.js",
+	},
+	"dev": {
+		"persistence": {
+			"launchCommand": ".\\bin\\chrome_kiosk_dev.cmd",
+			"maxMemory": 0,
+			"startupTimeout": 0,
+			"heartbeatTimeout": 0
+		},
+		"logging": {
+			"console": {
+				"preserve": true
+			},
+			"file": {
+				"enabled": false
+			},
+			"eventFile": {
+				"enabled": false
+			},
+			"screenshots": {
+				"enabled": false
+			},
+			"loggly": {
+				"enabled": false
+			}
+		},
+	},
+	"mac": {
+		"persistence": {
+			"launchCommand": "./bin/chrome_kiosk.sh"
+		}
+	},
+	"dev.mac": {
+		"persistence": {
+			"launchCommand": "./bin/chrome_kiosk_dev.sh"
+		}
+	}
+}

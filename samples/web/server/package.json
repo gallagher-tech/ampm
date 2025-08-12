@@ -1,12 +1,40 @@
 {
-    "name": "server",
-    "version": "1.0.0",
-    "description": "",
-    "main": "server.js",
-    "author": "",
-    "license": "MIT",
-    "dependencies": {
-        "express": "^4.13.3",
-        "lodash": "^3.10.1"
-    }
+  "name": "ga-app",
+  "version": "2.0.0",
+  "description": "NodeJS server providing webapp serving and websockets.",
+  "exports": "index.js",
+  "type": "module",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "test": "echo \\\"Error: no test specified\\\" && exit 0",
+    "start": "NODE_ENV=production node index.js",
+    "dev": "NODE_ENV=development node index.js",
+    "build": "echo \\\"No build specified\\\" && exit 0",
+    "build:install": "./bin/build.cmd",
+    "build:mac": "./bin/build.sh",
+    "copyandzip": "copyfiles -e='data/**/*' -e='logs/**/*' '**/*' '.env' ../build && bestzip ../build.zip ../build"
+  },
+  "author": "G&A",
+  "license": "ISC",
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "bestzip": "^2.2.1",
+    "copyfiles": "^2.4.1",
+    "eslint": "^9.18.0",
+    "globals": "^15.14.0"
+  },
+  "dependencies": {
+    "ampm": "file:../../..",
+    "axios": "^1.7.2",
+    "chrome-launcher": "^1.1.2",
+    "chrome-runner": "^1.3.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.1",
+    "http": "^0.0.1-security",
+    "uuid": "^11.0.5",
+    "ws": "^8.18.1"
+  }
 }

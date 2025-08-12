@@ -1,0 +1,8 @@
+.DS_Store
+node_modules/
+logs/
+ampm-state.json
+npm-debug.log
+db.json
+chrome-data-dir/*
+!chrome-data-dir/.gitkeep 

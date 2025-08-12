@@ -7,6 +7,7 @@ logs/
 *.log
 *.sublime-workspace
 *.csproj.user
+*/Plugins/
 
 # Compiled Object files
 *.suo

@@ -43,7 +43,7 @@ namespace AmpmLib
 			// Handle incoming OSC messages.
 			_OscReceive.PacketReceivedEvent += Server_MessageReceived;
 
-            ipAddress = GetLocalIPAddress();
+			ipAddress = GetLocalIPAddress();
             OSCHandler.Instance.CreateClient ("AMPM", ipAddress, 3002); // Creating a client to send messages on
 		}
 
@@ -52,7 +52,7 @@ namespace AmpmLib
             IPHostEntry host;
             try
             {
-                 host = Dns.GetHostEntry(hostName);
+                 host = Dns.GetHostEntry("127.0.0.1");
             }
             catch(System.Net.Sockets.SocketException ex)
             {
@@ -68,21 +68,30 @@ namespace AmpmLib
             throw new Exception("Local IP Address Not Found!");
         }
         public static void GetConfig(string url = "http://localhost:8888/config") {
-			// load the url
-			string strContent;
-			var webRequest = WebRequest.Create(@url);
-			using (var response = webRequest.GetResponse())
-			using(var content = response.GetResponseStream())
-			using(var reader = new StreamReader(content)){
-				strContent = reader.ReadToEnd();
+			try
+			{
+                // load the url
+                string strContent;
+                var webRequest = WebRequest.Create(@url);
+                using (var response = webRequest.GetResponse())
+                using (var content = response.GetResponseStream())
+                using (var reader = new StreamReader(content))
+                {
+                    strContent = reader.ReadToEnd();
+                }
+
+                // parse it as json
+                _Config = JSON.Parse(strContent);
+
+                // fire OnConfigLoaded
+                if (OnConfigLoaded != null)
+                    OnConfigLoaded();
+            }
+			catch (Exception e)
+			{
+
+				throw;
 			}
-
-			// parse it as json
-			_Config = JSON.Parse(strContent);
-
-			// fire OnConfigLoaded
-			if(OnConfigLoaded!=null)
-				OnConfigLoaded();
 		}
 
 		/// <summary>
