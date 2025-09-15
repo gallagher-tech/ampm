@@ -19,7 +19,16 @@ Tested working with Unity 2022.3.31f1
 
 ## Download In-game Debug Console for Unity 3D 
 
-Install the "In-game Debug Console" for Unity 3D by following the instructions in this [GitHub Repository](https://github.com/yasirkula/UnityIngameDebugConsole).
+Install the In-game Debug Console by following the instructions in [IngameDebugConsole.unitypackage GitHub repo](https://github.com/yasirkula/UnityIngameDebugConsole/releases).
+
+
+## To run the sample
+
+- Within the Unity3D folder, make a new directory called "Build"
+- Build the project to "Build" directory
+- Copy the file ampm.json to the "Build" directory. Edit the ampm.json file so that the "launchCommand" property holds the name of your build file.
+- From a command line window navigate to the "Build" directory and run `ampm` to run in production mode, or `ampm ampm.json dev` to run in dev mode.
+- Make sure the Unity window that opens up is active (ie. you should not have any other tabs open in front of the Unity window)
 
 
 ## How to integrate AMPM with your Unity3D Application:
@@ -29,10 +38,7 @@ Install the "In-game Debug Console" for Unity 3D by following the instructions i
 - Build the file to a directory.
 
 
-## Start the app with AMPM
+## To start the app with AMPM
 
-- Within the Unity3D folder, make a new directory called "Build"
-- Build the project to "Build" directory
-- Copy the file ampm.json to the "Build" directory. Edit the ampm.json file so that the "launchCommand" property holds the name of your build file.
-- From a command line window navigate to the same directory as this README and run `ampm` to run in production mode, or `ampm ampm.json dev` to run in dev mode.
-- Make sure the Unity window that opens up is active (ie. you should not have any other tabs open in front of the Unity window)
+- Copy the file ampm.json to the same directory as the unity build. Edit the ampm.json file so that the "launchCommand" property holds the name of your build file.
+- From a command line window navigate to your "Build" directory and run `ampm` to run in production mode, or `ampm ampm.json dev` to run in dev mode.
