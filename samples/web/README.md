@@ -1,6 +1,6 @@
 ## ampm web sample
 
-From the server directory, run:
+From the root and server directories, run:
 
 `npm install`
 
@@ -13,6 +13,7 @@ Then, from this directory, run:
 `ampm ampm.json dev` - to load the ampm.json file, but run in dev mode.
 
 If prompted for a username and password when opening the AMPM Web Server (to see the logs):
+<br>
 <br>
 
 **Username:** username <br>
