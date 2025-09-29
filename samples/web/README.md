@@ -45,6 +45,7 @@ for prod: `./node_modules/.bin/ampm` or `./node_modules/.bin/ampm ampm.json mac`
 
 If prompted for a username and password when opening the AMPM Web Server (to see the logs):
 <br>
+<br>
 
 **Username:** username <br>
 **Password:** password
