@@ -13,5 +13,7 @@ Then, from this directory, run:
 `ampm ampm.json dev` - to load the ampm.json file, but run in dev mode.
 
 If prompted for a username and password when opening the AMPM Web Server (to see the logs):
-Username: username
-Password: password
+<br>
+
+**Username:** username <br>
+**Password:** password
