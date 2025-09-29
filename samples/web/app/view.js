@@ -1,62 +1,74 @@
 // Root view, contains all subviews.
 APP.View = Backbone.View.extend({
-    events: {
-        'click #crash': '_onCrashClicked',
-        'click #hang': '_onHangClicked',
-        'click #log': '_onLogClicked',
-        'click #event': '_onEventClicked',
-        'click #console': '_onConsoleClicked',
-        'click #restart': '_onRestartClicked'
-    },
+  events: {
+    "click #crash": "_onCrashClicked",
+    "click #hang": "_onHangClicked",
+    "click #log": "_onLogClicked",
+    "click #event": "_onEventClicked",
+    "click #console": "_onConsoleClicked",
+    "click #restart": "_onRestartClicked",
+  },
 
-    _subView: null,
+  _subView: null,
 
-    initialize: function() {
+  initialize: function () {
+    // Initializing a sub view with a model.
+    this._subView = new APP.Views.SomeView({
+      el: this.$el,
+      model: this.model.get("someModel"),
+    });
 
-        // Initializing a sub view with a model.
-        this._subView = new APP.Views.SomeView({
-            el: this.$el,
-            model: this.model.get('someModel')
-        });
+    $("#config", this.$el).html(JSON.stringify(APP.config, null, "\t"));
 
-        $('#config', this.$el).html(JSON.stringify(APP.config, null, '\t'));
+    // Send the mouse position back to the server.
+    this.$el.mousemove(function (e) {
+      ampm.socket().emit("mouse", {
+        x: e.pageX,
+        y: e.pageY,
+      });
+    });
+  },
 
-        // Send the mouse position back to the server.
-        this.$el.mousemove(function(e) {
-            ampm.socket().emit('mouse', {
-                x: e.pageX,
-                y: e.pageY
-            });
-        });
-    },
+  _onCrashClicked: function () {
+    ampm.logEvent("APP CRASH", "crashed");
+    // Crashes will cause heartbeats to stop being sent and your app will get restarted.
+    var bar = foo.bar;
+  },
 
-    _onCrashClicked: function() {
-        // Crashes will cause heartbeats to stop being sent and your app will get restarted.
-        var bar = foo.bar;
-    },
+  _onHangClicked: function () {
+    ampm.logEvent("APP HANG", "hang");
 
-    _onHangClicked: function() {
-        // Hangs will cause heartbeats to stop being sent and your app will get restarted.
-        while (true) {}
-    },
+    // Hangs will cause heartbeats to stop being sent and your app will get restarted.
+    while (true) {}
+  },
 
-    _onLogClicked: function() {
-        // Example of how to send log messages.
-        ampm.info('informational!');
-        ampm.warning('warning!');
-        ampm.error('error!');
-    },
+  // logEvent parameters: function(category, action, label, value)
 
-    _onEventClicked: function() {
-        // Example of how to track events.
-        ampm.logEvent('app event', 'clicked', 'button', 2);
-    },
+  _onLogClicked: function () {
+    // Example of how to send log messages.
+    // 4th paramater '0' is arbitrary
+    ampm.info("informational!");
+    ampm.logEvent("APP LOG", "info");
 
-    _onRestartClicked: function() {
-        ampm.socket().emit('restart');
-    },
+    ampm.warning("warning!");
+    ampm.logEvent("APP LOG", "warning");
 
-    _onConsoleClicked: function() {
-        window.open('http://localhost:8888');
-    }
+    ampm.error("error!");
+    ampm.logEvent("APP LOG", "error");
+  },
+
+  _onEventClicked: function () {
+    // Example of how to track events.
+    ampm.logEvent("APP EVENT", "clicked");
+  },
+
+  _onRestartClicked: function () {
+    ampm.socket().emit("restart");
+    ampm.logEvent("APP RESTART", "restart");
+  },
+
+  _onConsoleClicked: function () {
+    ampm.logEvent("WEB CONSOLE OPENED", "open console");
+    window.open("http://localhost:8888");
+  },
 });
