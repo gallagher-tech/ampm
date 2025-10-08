@@ -236,4 +236,14 @@ exports.Network = BaseModel.extend({
 
     transport.emit(e, data);
   },
+
+  broadcastLog(message, level = "info") {
+    if (this.transports && this.transports.socketToConsole) {
+      this.transports.socketToConsole.emit("log", {
+        message,
+        level,
+        time: new Date().toISOString(),
+      });
+    }
+  },
 });
