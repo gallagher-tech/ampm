@@ -3,7 +3,7 @@
 //--------------------------------------------------------------
 void ofApp::setup() {
 	// NOTE: modify ampm.json to launch the correct binary file
-
+	ofLogNotice() << "🎂 Hello from openFrameworks!";
 
 	ampm::AMPMClient::init(3002, 3003, 8888);
 	mAMPMInstance = ampm::ampm();

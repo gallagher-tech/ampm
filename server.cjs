@@ -113,6 +113,26 @@ global.$$logging = new Logging({
   config: $$config.logging,
 });
 
+// --- Added: hook logger methods to broadcast logs to web clients ---
+const origInfo = logger.info;
+const origWarn = logger.warn;
+const origError = logger.error;
+
+logger.info = function (...args) {
+  origInfo.apply(logger, args);
+  if (global.$$network) global.$$network.broadcastLog(args.join(" "), "info");
+};
+
+logger.warn = function (...args) {
+  origWarn.apply(logger, args);
+  if (global.$$network) global.$$network.broadcastLog(args.join(" "), "warn");
+};
+
+logger.error = function (...args) {
+  origError.apply(logger, args);
+  if (global.$$network) global.$$network.broadcastLog(args.join(" "), "error");
+};
+
 // The back-end for the web console.
 global.$$consoleState = new ConsoleState({
   configs: configPaths,
