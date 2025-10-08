@@ -15,7 +15,9 @@ npm install
 - Go to the openFrameworks directory, which you just downloaded.
 - In openFrameworks/projectGenerator, run projectGenerator.exe.
 - In projectGenerator, select the directory that this README file is saved in (ie. Users > Your Username > Downloads > ampm > samples)
-  <img src = "assets/oF_projectGenerator.png" alt="screenshot of project generator window" width = "200px">
+  <br>
+  <img src = "assets/oF_projectGenerator.png" alt="screenshot of project generator window" width = "300px">
+  <br>
 - Click "Generate" to create the .sln file and bin/ folder
 
 ## Build the openFrameworks project
@@ -36,4 +38,4 @@ npm install
 
 - As of 8 Oct 2025, you should be able to view logs in the AMPM web console.
   <br>
-  <img src = "assets/web_console.png" alt="screenshot of AMPM web console" width = "200px">
+  <img src = "assets/web_console.png" alt="screenshot of AMPM web console" width = "300px">
