@@ -28,6 +28,12 @@ exports.Network = BaseModel.extend({
     // used for the app to send log messages and event tracking.
     socketToAppPort: 3001,
 
+    // CORS settings for socketToAppPort.
+    // If "localhost" (default), only allow localhost or 127.0.0.1.
+    // If null, CORS is *.
+    // Otherwise value is passed to cors options.
+    socketToAppPortCors: "localhost",
+
     // The port used to communicate from the client app to the server over UDP/OSC.
     oscFromAppPort: 3002,
 
@@ -174,7 +180,7 @@ exports.Network = BaseModel.extend({
     this.transports.oscFromApp.on("ready", function () {
       logger.info(
         "OSC server listening for app messages on port " +
-          this.options.localPort
+        this.options.localPort
       );
     });
 
@@ -204,12 +210,31 @@ exports.Network = BaseModel.extend({
 
     //// Set up socket connection to app.
     // Updated to use modern Socket.IO initialization API
-    this.transports.socketToApp = new Server({
-      cors: {
-        origin: "http://localhost:8000", // Allow requests from your web app's origin
+    let corsOptions = {
+      origin: "*", // Allow requests from your web app's origin
+      methods: ["GET", "POST"],
+      credentials: true, // Allow credentials to be sent
+    };
+    const corsSettings = this.get("socketToAppPortCors");
+    if (corsSettings === "localhost") {
+      // check if origin is localhost
+      corsOptions = {
+        origin: function (origin, callback) {
+          if (origin && /^https{0,1}:\/\/(localhost|127\.0\.0\.1):{0,1}\d*/.test(origin)) {
+            callback(null, true);
+          } else {
+            callback(new Error("Not allowed"), false);  
+          }
+        },
         methods: ["GET", "POST"],
         credentials: true, // Allow credentials to be sent
-      },
+      };
+    } else if (corsSettings) {
+      corsOptions = corsSettings; // use provided settings
+    }
+
+    this.transports.socketToApp = new Server({
+      cors: corsOptions,
     });
     this.transports.socketToApp.listen(this.get("socketToAppPort"));
   },
