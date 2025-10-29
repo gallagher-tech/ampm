@@ -135,7 +135,7 @@ The persistence manager is in chage of starting a process, monitoring it, restar
     // system configuration.
     "postLaunchCommand": "",
 
-    // Restart the app if it doesn't start up in this much time. Set to
+    // Restart the app if it doesn't start up in this many seconds. Set to
     // zero (default) to allow the app to take forever to start up.
     "startupTimeout": 0,
 
