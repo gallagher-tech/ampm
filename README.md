@@ -135,7 +135,7 @@ The persistence manager is in chage of starting a process, monitoring it, restar
     // system configuration.
     "postLaunchCommand": "",
 
-    // Restart the app if it doesn't start up in this much time. Set to
+    // Restart the app if it doesn't start up in this many seconds. Set to
     // zero (default) to allow the app to take forever to start up.
     "startupTimeout": 0,
 
@@ -279,6 +279,13 @@ The networking module coordinates connections between ampm, the application its 
     // The port used to communicate between node and the client app over a TCP socket. This is
     // used for the app to send log messages and event tracking.
     "socketToAppPort": 3001,
+    
+    // CORS settings for socketToAppPort.
+    // If "localhost" (default), only allow localhost or 127.0.0.1.
+    // If null, CORS is *.
+    // Otherwise value is passed to cors options. 
+    // see https://expressjs.com/en/resources/middleware/cors.html
+    "socketToAppPortCors": "localhost",
 
     // The port used to communicate from the client app to the server over UDP/OSC.
     "oscFromAppPort": 3002,
