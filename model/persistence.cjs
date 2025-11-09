@@ -10,6 +10,7 @@ var Backbone = require("backbone"); // Data model utilities. http://backbonejs.o
 var cron = require("node-cron"); // Schedule processing.
 var cronParser = require("cron-parser"); // Cron string parsing.
 var execa = require("execa"); // Modern child process execution. https://github.com/sindresorhus/execa
+var kill = require('tree-kill');
 
 var BaseModel = require("./baseModel.cjs").BaseModel;
 
@@ -296,7 +297,7 @@ exports.Persistence = BaseModel.extend({
     if (!this._lastHeart) {
       this._isStartingUp = false;
       this._firstHeart = Date.now();
-      logger.info("App started.");
+      logger.info("App started on PID " + this.processId() + ".");
 
       if (this.get("postLaunchCommand")) {
         execa
@@ -404,6 +405,7 @@ exports.Persistence = BaseModel.extend({
 
   // Kill the app process.
   shutdownApp: function (callback) {
+    logger.info("Shutting down the app with PID " + this.processId());
     if (this._isShuttingDown || this._isStartingUp) {
       return;
     }
@@ -412,6 +414,7 @@ exports.Persistence = BaseModel.extend({
 
     // See if the app is running.
     if (!this.processId() && !this.sideProcessId()) {
+      logger.info("Could not find PID running, app is already dead");
       this._isShuttingDown = false;
       // Nope, not running.
       if (callback) {
@@ -421,17 +424,18 @@ exports.Persistence = BaseModel.extend({
       return;
     }
 
-    // Kill the app.
+    // Kill the app and any child processes.
     clearTimeout(this._restartTimeout);
-    this._appProcess.kill();
+    kill(this.processId());
     if (this._sideProcess) {
-      this._sideProcess.kill();
+      kill(this.sideProcessId()); 
     }
 
     // Check on an interval to see if it's dead.
     var check = setInterval(
       _.bind(function () {
         if (this.processId() || this.sideProcessId()) {
+          // logger.info("App " + this.processId() + " is still running, check again" );
           return;
         }
 
