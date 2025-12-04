@@ -36,6 +36,7 @@
 		"passport-http": "^0.3.0",
 		"socket.io": "^4.7.4",
 		"socket.io-client": "^4.7.4",
+		"tree-kill": "^1.2.2",
 		"underscore.string": "^3.3.6",
 		"universal-analytics": "^0.5.3",
 		"winston": "^3.17.0",
