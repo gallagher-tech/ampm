@@ -50,9 +50,9 @@ Fork currently maintained by G&A.
 
 To install ampm from this git repo, run:
 
-`npm install gallagher-tech/ampm#dependency-upgrade -g`
+`npm install gallagher-tech/develop -g`
 
-(drop or change `dependency-upgrade` if needed a different branch)
+(drop or change `develop` if needed a different branch)
 
 To install from source, clone the repo, and do `npm link` from the root of the repo. This is the best way to do development on ampm itself.
 
