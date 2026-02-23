@@ -47,12 +47,9 @@ process.argv.slice(4).forEach(function (a, i) {
 });
 
 function start() {
-  var npxExecutable = "npx"; // Use npx to avoid platform specific issues with nodemon
-  var commandAndArgs = ["nodemon"].concat(args);
-
-  var ampm = child_process.spawn(npxExecutable, commandAndArgs, {
+  var ampm = child_process.spawn("nodemon", args, {
     stdio: "inherit",
-    shell: process.platform === "win32", // Still useful for npx on Windows
+    shell: process.platform === "win32",
   });
   ampm.on("close", start);
 }
