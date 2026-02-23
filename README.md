@@ -48,7 +48,11 @@ Fork currently maintained by G&A.
 
 # Installation
 
-To install ampm from this git repo, run:
+To install ampm from this git repo, first install [nodemon](https://www.npmjs.com/package/nodemon).
+
+`npm install nodemon -g`
+
+then run:
 
 `npm install  gallagher-tech/ampm#develop -g`
 
