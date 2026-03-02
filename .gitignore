@@ -116,3 +116,7 @@ addons/*
 # rule to avoid non-official apps going into git
 # see apps/.gitignore
 apps/*
+
+# touchdesigner backups
+samples/touchDesigner/ampm-sample.*.toe
+samples/touchDesigner/backups/
