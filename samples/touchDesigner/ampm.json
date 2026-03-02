@@ -1,0 +1,21 @@
+{
+    "default": {
+        "persistence": {
+            "launchCommand": "ampm-sample.toe",
+            "maxMemory": 0,
+            "startupTimeout": 30,
+            "heartbeatTimeout": 10
+        },
+        "logging": {
+            "file": {
+                "filename": "logs/server"
+            },
+            "eventFile": {
+                "filename": "logs/event-{date}.tsv"
+            },
+            "screenshots": {
+                "filename": "logs/capture-{date}.jpg"
+            },
+        }
+    }
+}
