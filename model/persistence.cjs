@@ -490,10 +490,17 @@ exports.Persistence = BaseModel.extend({
 
     // Start the app.
     logger.info("App starting up.");
+    // shell:false (not true): _parseCommand has already split the executable
+    // from its args, so no shell is needed. Under shell:true Windows re-parses
+    // the command line and an exe path containing spaces (e.g. "C:\Program
+    // Files\...\chrome.exe") gets split at the space -- cmd tries to run
+    // "C:\Program", the app never launches, and ampm restart-loops. Passing the
+    // exe + args array with shell:false hands the path straight to CreateProcess
+    // and spaces are handled correctly.
     this._appProcess = child_process
       .spawn(parts[0], parts.slice(1), {
         cwd: path.dirname(parts[0]),
-        shell: true,
+        shell: false,
       })
       .on(
         "exit",
@@ -527,7 +534,7 @@ exports.Persistence = BaseModel.extend({
     this._sideProcess = child_process
       .spawn(parts[0], parts.slice(1), {
         cwd: path.dirname(parts[0]),
-        shell: true
+        shell: false
       })
       .on(
         "exit",

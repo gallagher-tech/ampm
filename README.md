@@ -10,7 +10,7 @@ ampm is [Stimulant's](http://stimulant.com) tool for monitoring public-facing so
 - Launches an application and restarts it when it crashes, leaks, or whenever you want it to.
 - Provides application configuration, and applies different settings for different environments.
 - Makes it easy to log troubleshooting information to a file, and email out any errors or crashes.
-- (no longer supported) Makes it easy to integrate Google Analytics with an application.
+- Makes it easy to send usage analytics to [PostHog](https://posthog.com) from an application.
 - Provides hooks for custom server-side logic and ways for multiple instances of an app to communicate.
 - Provides a mobile-friendly web panel which displays app status and controls.
 - Supports any application type that can speak websockets or OSC. There are samples for Web app, Unity, and oF for now.
@@ -21,7 +21,7 @@ Fork currently maintained by G&A.
 - Works with Node v22
 - Dependencies are updated
 - Process monitering, heartbeat, logging and emailing are tested working
-- Google Analytics is no longer supported
+- Google Analytics has been replaced with PostHog (relayed server-side; client apps are unchanged)
 - Samples updated
 - Updated for 'impprt'/module use
 
@@ -223,10 +223,15 @@ The logging module sends logs from ampm and the application being monitored to a
         "preserve": false // If false, the ampm client should send console output to the server if possible.
     },
 
-    // Settings for Google Analytics.
-    "google": {
-        "enabled": true, // false to turn off
-        "accountId": "", // The property ID -- this should be unique per project.
+    // Settings for PostHog analytics. Events are relayed to PostHog server-side;
+    // client apps are unchanged. See the Event Tracking section for setup details.
+    "posthog": {
+        "enabled": false, // false to turn off
+        "apiKey": "", // PostHog project API key -- never commit this. See Event Tracking below.
+        "host": "https://us.i.posthog.com", // Cloud EU / US / self-hosted URL.
+        "distinctId": "", // Optional fixed identity; empty -> a stable per-machine id is generated.
+        "flushAt": 20, // Send a batch once this many events are queued.
+        "flushInterval": 10000 // ...or at least this often (ms).
     },
 
     // Settings for the event log file.
@@ -349,7 +354,52 @@ The `level` can be `error`, `warn`, or `info`. `error` is the most severe, and i
 
 ## Event Tracking
 
-ampm can track events indicating normal usage, such as button clicks or accesses to various content. These are sent to Google Analytics and configured via `logging.google`. To track an event, send a TCP message over a web socket on `network.socketToAppPort` (default is 3002). The event name should be `event` and the payload should be an object like this:
+ampm can track events indicating normal usage, such as button clicks or accesses to various content. Events are relayed to [PostHog](https://posthog.com) and configured via `logging.posthog`. **Client apps are unchanged** — they send the same message as before, and ampm maps it to a PostHog event on the server.
+
+### Setting up the PostHog API key
+
+Create a free project at [posthog.com](https://posthog.com) and copy the project API key (it starts with `phc_`). Note which region your project is on — the host is `https://us.i.posthog.com` (US) or `https://eu.i.posthog.com` (EU); a key sent to the wrong region is silently dropped.
+
+There are exactly two supported ways to provide the key. Pick one.
+
+**Method 1 — Key directly in the config (simplest)**
+
+Put the key in the `apiKey` field of a local `ampm.json` that is **not** tracked by git:
+
+```json
+"posthog": {
+    "enabled": true,
+    "apiKey": "phc_yourprojectkey",
+    "host": "https://us.i.posthog.com"
+}
+```
+
+**Method 2 — Windows Environment Variable (keeps the key out of the config file)**
+
+Use the `%POSTHOG_API_KEY%` placeholder in `ampm.json` — ampm replaces it with the value of the `POSTHOG_API_KEY` environment variable when it starts:
+
+```json
+"posthog": {
+    "enabled": true,
+    "apiKey": "%POSTHOG_API_KEY%",
+    "host": "https://us.i.posthog.com"
+}
+```
+
+Then create that variable in Windows so it persists:
+
+1. Press <kbd>Win</kbd> and search **"Edit environment variables for your account"**, open it.
+2. Under **User variables**, click **New…**
+3. **Variable name:** `POSTHOG_API_KEY` &nbsp; **Variable value:** your `phc_…` key. Click **OK**.
+4. **Open a new terminal** — already-open terminals (and any running ampm) won't see the variable until they're restarted.
+
+> Do **not** use `$env:POSTHOG_API_KEY = "…"` in PowerShell. That only sets the variable for that one terminal session, does not appear in the Environment Variables GUI, and is gone when the window closes — it is the most common reason the key "doesn't work."
+
+**Confirming it worked:** on startup ampm logs one line — `PostHog enabled -> <host> (apiKey resolved, NN chars).` if the key was read, or a warning if it resolved empty or doesn't look like a `phc_` key. (PostHog's ingest endpoint returns HTTP 200 even for a wrong/empty key and then drops the events, so this log line is the reliable check, not the absence of errors.)
+
+### Sending events
+
+To track an event, send a TCP message over a web socket on `network.socketToAppPort` (default is 3001), or an OSC message on `network.oscFromAppPort` (default is 3002). The event name should be `event` and the payload should be an object like this:
 
 ```JavaScript
 {
@@ -360,7 +410,9 @@ ampm can track events indicating normal usage, such as button clicks or accesses
 }
 ```
 
-More information about the types of data to include in the event tracking message can be found on the [Google Analytics](https://support.google.com/analytics/answer/1033068) site.
+On the server this becomes a PostHog event whose name is `Category`, with `Action`, `Label`, `Value`, and the machine `hostname` as event properties. Events are written to a durable on-disk outbox (`logs/posthog-outbox.jsonl`) first and delivered to PostHog in batches, so they survive restarts and network drops and are replayed on the next launch. Each ampm machine is identified by a stable `distinctId` (auto-generated and persisted, or set explicitly via `logging.posthog.distinctId`).
+
+Clients may also send a PostHog-native payload directly — `{ "event": "my_event", "properties": { ... } }` — which is forwarded as-is. This is additive, so richer client-side events can be adopted later without breaking the `Category`/`Action`/`Label`/`Value` form above.
 
 <a name="integration-restarting"></a>
 

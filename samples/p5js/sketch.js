@@ -1,25 +1,40 @@
 let x = 0;
 let y = 0;
+let clickCount = 0;
 
 function setup() {
   createCanvas(720, 400);
   noStroke();
-  textOutput();
+
+  // Start the heartbeat loop so ampm knows the app is alive
+  (function heart() {
+    ampm.heart();
+    requestAnimationFrame(heart);
+  })();
+
+  // Send a session-start event once the socket connects
+  ampm.socket().on('connect', function() {
+    ampm.logEvent('session', 'start', 'p5js', 1);
+  });
 }
 
 function draw() {
   background(51);
-  text('p5js AMPM testing', 50, 50);
 
-  // lerp() calculates a number between two numbers at a specific increment.
-  // The amt parameter is the amount to interpolate between the two values
-  // where 0.0 is equal to the first point, 0.1 is very near the first point, 0.5
-  // is halfway in between, etc.
+  fill(200);
+  textSize(14);
+  text('p5js + ampm — click canvas to send events', 50, 30);
+  text('Events sent: ' + clickCount, 50, 55);
 
-  // Move 5% of the way to the mouse location each frame
+  // Follow the mouse with a lerp
   x = lerp(x, mouseX, 0.05);
   y = lerp(y, mouseY, 0.05);
 
   fill(255);
   ellipse(x, y, 66, 66);
+}
+
+function mouseClicked() {
+  clickCount++;
+  ampm.logEvent('interaction', 'click', 'canvas', clickCount);
 }

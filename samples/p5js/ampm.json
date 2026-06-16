@@ -28,6 +28,11 @@
 			},
 			"mail": {
 				"enabled": false
+			},
+			"posthog": {
+				"enabled": true,
+				"apiKey": "%POSTHOG_API_KEY%",
+				"host": "https://us.i.posthog.com"
 			}
 		},
 		"plugin": "server/server.js",
@@ -37,7 +42,7 @@
 	},
 	"dev": {
 		"persistence": {
-			"launchCommand": "'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe' --incognito --disable-pinch --overscroll-history-navigation=0 http://localhost:8000/",
+			"launchCommand": "",
 			"maxMemory": 0,
 			"startupTimeout": 0,
 			"heartbeatTimeout": 0

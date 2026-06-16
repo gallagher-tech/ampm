@@ -38,7 +38,6 @@
 		"socket.io-client": "^4.7.4",
 		"tree-kill": "^1.2.2",
 		"underscore.string": "^3.3.6",
-		"universal-analytics": "^0.5.3",
 		"winston": "^3.17.0",
 		"winston-daily-rotate-file": "^4.7.1",
 		"winston-loggly-bulk": "^3.2.1",

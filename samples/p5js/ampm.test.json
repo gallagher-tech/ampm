@@ -1,0 +1,39 @@
+{
+	"persistence": {
+		"launchCommand": "",
+		"startupTimeout": 0,
+		"heartbeatTimeout": 0,
+		"restartOnProcessExit": false
+	},
+	"logging": {
+		"console": {
+			"enabled": true,
+			"preserve": true,
+			"level": "info"
+		},
+		"file": {
+			"enabled": false
+		},
+		"eventFile": {
+			"enabled": true,
+			"filename": "logs/event-{date}.tsv"
+		},
+		"screenshots": {
+			"enabled": false
+		},
+		"loggly": {
+			"enabled": false
+		},
+		"mail": {
+			"enabled": false
+		},
+		"posthog": {
+			"enabled": true,
+			"apiKey": "%POSTHOG_API_KEY%",
+			"host": "https://us.i.posthog.com",
+			"flushAt": 1,
+			"flushInterval": 2000
+		}
+	},
+	"plugin": "server/server.js"
+}

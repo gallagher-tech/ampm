@@ -44,18 +44,24 @@ var ampm = {
         }
 
         ampm._socket = io.connect('http://localhost:3001', {
-            reconnectionAttempts: 5
+            // A kiosk should recover on its own whenever ampm comes back (after an
+            // ampm restart, a network blip, etc.), so keep retrying indefinitely
+            // instead of giving up after a few attempts.
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000
         });
         ampm._socket.on('connect', function() {
             console.log('ampm socket connected');
         });
-        ampm._socket.once('connect_error', function(error) {
+        // Log connection errors, but DO NOT replace the socket with a no-op.
+        // socket.io reconnects automatically; the previous behavior swapped in a
+        // dummy { emit, on } on the first error, which permanently wedged the
+        // client -- heartbeats and events stopped forever ("sending got stuck")
+        // until the page was reloaded, even once ampm was back up.
+        ampm._socket.on('connect_error', function(error) {
             console.log('ampm socket connection error: ' + error);
-
-            ampm._socket = {
-                emit: function() {},
-                on: function() {}
-            };
         });
         ampm._socket.on('config', function(config) {
             if (!config.logging.console.preserve) {
@@ -86,7 +92,13 @@ var ampm = {
             return;
         }
 
-        ampm.socket().emit('heart');
+        // Only beat when actually connected. heart() runs every animation frame
+        // (~60/s); buffering that while disconnected would balloon and then flood
+        // ampm on reconnect, and a missed beat during an outage is harmless.
+        var socket = ampm.socket();
+        if (socket.connected) {
+            socket.emit('heart');
+        }
     },
 
     // Log a user event.

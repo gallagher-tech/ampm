@@ -29,7 +29,7 @@
                 "enabled": false
             },
 
-            "google": {
+            "posthog": {
                 "enabled": false
             },
 

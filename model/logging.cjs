@@ -8,9 +8,8 @@ var _ = require("lodash"); // Utilities. http://underscorejs.org/
 var Backbone = require("backbone"); // Data model utilities. http://backbonejs.org/
 var winston = require("winston"); // Logging. https://github.com/flatiron/winston
 var fs = require("fs-extra"); // Enhanced file system with recursive directory creation. https://github.com/jprichardson/node-fs-extra
-var ua = require("universal-analytics"); // Google Analytics. https://npmjs.org/package/universal-analytics
-
 var BaseModel = require("./baseModel.cjs").BaseModel;
+var Analytics = require("./analytics.cjs").Analytics; // PostHog analytics relay.
 
 // Initialize and manage the various loggers.
 exports.Logging = BaseModel.extend({
@@ -35,10 +34,16 @@ exports.Logging = BaseModel.extend({
       preserve: false, // If false, the ampm client should send console output to the server if possible.
     },
 
-    // Settings for Google Analytics.
-    google: {
-      enabled: true, // false to turn off
-      accountId: "", // The property ID -- this should be unique per project
+    // Settings for PostHog analytics (https://posthog.com). Events are mapped
+    // and relayed server-side; the client apps are unchanged. The full delivery
+    // implementation (durable outbox + batching) lives in model/analytics.cjs.
+    posthog: {
+      enabled: false, // false to turn off
+      apiKey: "", // PostHog project API key. Keep out of committed sample configs.
+      host: "https://eu.i.posthog.com", // Cloud EU / US (https://us.i.posthog.com) / self-hosted.
+      distinctId: "", // Optional fixed identity; empty -> a stable per-machine id is generated.
+      flushAt: 20, // Send a batch once this many events are queued.
+      flushInterval: 10000, // ...or at least this often (ms).
     },
 
     // Settings for the event log file.
@@ -85,8 +90,8 @@ exports.Logging = BaseModel.extend({
     eventCache: null,
   },
 
-  // The Google Analytics client.
-  _google: null,
+  // The PostHog analytics relay (durable outbox + batch sender).
+  _analytics: null,
 
   // A console window used for the event viewer logger.
   _eventSourceConsole: null,
@@ -224,12 +229,8 @@ exports.Logging = BaseModel.extend({
       }
     }
 
-    // Set up Google Analytics.
-    if (this.get("google").enabled) {
-      this._google = ua(this.get("google").accountId, os.hostname(), {
-        strictCidFormat: false,
-      });
-    }
+    // Set up the PostHog analytics relay. It no-ops internally when disabled.
+    this._analytics = new Analytics({ config: this.get("posthog") });
 
     // Create the screenshots directory if needed.
     if (this.get("screenshots").enabled) {
@@ -285,6 +286,21 @@ exports.Logging = BaseModel.extend({
     $$network.transports.oscFromApp.on("event", _.bind(this._logEvent, this));
   },
 
+  // Flush any queued analytics events, resolving within timeoutMs. Used by the
+  // process shutdown hooks so the final batch is sent before exit.
+  flushAnalytics: function (timeoutMs) {
+    return this._analytics
+      ? this._analytics.flush(timeoutMs)
+      : Promise.resolve();
+  },
+
+  // Stop the analytics flush timer (used on shutdown after a final flush).
+  stopAnalytics: function () {
+    if (this._analytics) {
+      this._analytics.stop();
+    }
+  },
+
   _logMessage: function (data) {
     if (logger && logger[data.level]) {
       logger[data.level](data.message);
@@ -306,43 +322,29 @@ exports.Logging = BaseModel.extend({
       cache.splice(0, cache.length - this.get("cacheAmount"));
     }
 
-    if (this._google) {
-      // Log to Google Analytics.
-
-      this._google.eventCount = this._google.eventCount || 0;
-
-      var params = {};
-      // Restart a session every 500 events, see issue #40
-      if (this._google.eventCount >= 500) {
-        this._google.eventCount = 0;
-        params.sessionControl = "start";
+    if (this._analytics) {
+      // Relay to PostHog. Clients still send {Category, Action, Label, Value};
+      // we map that to a PostHog-native {event, properties} here. A client may
+      // also send a native {event, properties} payload directly (additive, so
+      // richer client-side events can be adopted later without a breaking change).
+      var event, properties;
+      if (data.event) {
+        event = data.event;
+        properties = _.extend({}, data.properties);
+      } else {
+        event = data.Category || data.Action || "event";
+        properties = {
+          action: data.Action,
+          label: data.Label,
+          value: data.Value,
+        };
       }
+      properties.hostname = os.hostname();
 
-      this._google.event(
-        data.Category,
-        data.Action,
-        data.Label,
-        data.Value,
-        params
-      );
-      var queue = _.clone(this._google._queue);
-      this._google.send(
-        _.bind(function (error) {
-          if (!error) {
-            this._google.eventCount++;
-            return;
-          }
-
-          if (error.code === "ENOTFOUND") {
-            // Couldn't connect -- replace the queue and try next time.
-            // https://github.com/peaksandpies/universal-analytics/issues/12
-            this._google._queue = queue;
-          } else {
-            // Something else bad happened.
-            logger.warn("Error with Google Analytics", error);
-          }
-        }, this)
-      );
+      this._analytics.capture({
+        event: event,
+        properties: properties,
+      });
     }
 
     if (this.get("eventFile").enabled && this.get("eventFile").filename) {

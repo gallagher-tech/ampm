@@ -131,3 +131,37 @@ logger.info(
     ":" +
     $$network.get("socketToConsolePort")
 );
+
+// Flush queued analytics events on exit. The durable outbox in
+// model/analytics.cjs is the real guarantee -- anything not flushed here is
+// replayed on the next boot -- so this is a best-effort latency optimization
+// for the final batch (signal delivery under nodemon varies, esp. on Windows).
+var _shuttingDown = false;
+function gracefulShutdown(signal) {
+  if (_shuttingDown) {
+    return;
+  }
+  _shuttingDown = true;
+
+  if (global.logger) {
+    logger.info("Received " + signal + ", flushing analytics before exit.");
+  }
+
+  var finish = function () {
+    process.exit(0);
+  };
+
+  if (global.$$logging && $$logging.flushAnalytics) {
+    $$logging.stopAnalytics();
+    $$logging.flushAnalytics(2500).then(finish, finish);
+  } else {
+    finish();
+  }
+}
+
+process.on("SIGINT", function () {
+  gracefulShutdown("SIGINT");
+});
+process.on("SIGTERM", function () {
+  gracefulShutdown("SIGTERM");
+});

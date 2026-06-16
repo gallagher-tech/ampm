@@ -30,9 +30,10 @@
                 "password": "",
                 "to": ""
             },
-            "google": {
+            "posthog": {
                 "enabled": false,
-                "accountId": ""
+                "apiKey": "",
+                "host": "https://us.i.posthog.com"
             }
         }
     }
