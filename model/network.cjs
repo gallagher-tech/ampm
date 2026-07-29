@@ -67,8 +67,8 @@ exports.Network = BaseModel.extend({
               // Invalid user.
               return done(null, false);
             }
-          }
-        )
+          },
+        ),
       );
     }
 
@@ -101,7 +101,7 @@ exports.Network = BaseModel.extend({
         secret: secret,
         resave: false,
         saveUninitialized: true,
-      })
+      }),
     );
     app.use(passport.initialize());
     app.use(passport.session());
@@ -114,7 +114,7 @@ exports.Network = BaseModel.extend({
         }),
         function (req, res) {
           res.sendFile(path.resolve(__dirname + "/../view/index.html"));
-        }
+        },
       );
     } else {
       app.get("/", function (req, res) {
@@ -174,7 +174,7 @@ exports.Network = BaseModel.extend({
     this.transports.oscFromApp.on("ready", function () {
       logger.info(
         "OSC server listening for app messages on port " +
-          this.options.localPort
+          this.options.localPort,
       );
     });
 
@@ -191,7 +191,7 @@ exports.Network = BaseModel.extend({
         } else {
           this._handleOsc(this.transports.oscFromApp, oscMessage, info);
         }
-      }, this)
+      }, this),
     );
 
     //// Set up OSC connection to app.
@@ -206,7 +206,24 @@ exports.Network = BaseModel.extend({
     // Updated to use modern Socket.IO initialization API
     this.transports.socketToApp = new Server({
       cors: {
-        origin: "http://localhost:8000", // Allow requests from your web app's origin
+        origin: (origin, callback) => {
+          let isLocal = !origin; // No Origin header => non-browser client (.exe, TouchDesigner, etc.) — can't be forged by a browser.
+
+          if (!isLocal) {
+            try {
+              const hostname = new URL(origin).hostname;
+              isLocal = hostname === "localhost" || hostname === "127.0.0.1";
+            } catch (e) {
+              // Malformed Origin header — treat as not local.
+            }
+          }
+
+          if (isLocal) {
+            callback(null, true); // Allow the request
+          } else {
+            callback(new Error("Not allowed by CORS")); // Block external requests
+          }
+        },
         methods: ["GET", "POST"],
         credentials: true, // Allow credentials to be sent
       },
