@@ -207,13 +207,16 @@ exports.Network = BaseModel.extend({
     this.transports.socketToApp = new Server({
       cors: {
         origin: (origin, callback) => {
-          // allow all local websocket communication
-          const isLocal =
-            !origin ||
-            origin.startsWith("http://localhost") ||
-            origin.startsWith("http://127.0.0.1") ||
-            origin.startsWith("https://localhost") ||
-            origin.startsWith("https://127.0.0.1");
+          let isLocal = !origin; // No Origin header => non-browser client (.exe, TouchDesigner, etc.) — can't be forged by a browser.
+
+          if (!isLocal) {
+            try {
+              const hostname = new URL(origin).hostname;
+              isLocal = hostname === "localhost" || hostname === "127.0.0.1";
+            } catch (e) {
+              // Malformed Origin header — treat as not local.
+            }
+          }
 
           if (isLocal) {
             callback(null, true); // Allow the request
