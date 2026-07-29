@@ -25,6 +25,25 @@ if (!fs.existsSync(stateFile)) {
   fs.writeFileSync(stateFile, "{}");
 }
 
+// Single-instance lock: exit cleanly if another ampm is already running.
+var lockFile = path.join(appPath, ".ampm.lock");
+if (fs.existsSync(lockFile)) {
+  var lockPid = parseInt(fs.readFileSync(lockFile, "utf8").trim());
+  try {
+    process.kill(lockPid, 0); // throws if process no longer exists
+    console.error("ampm is already running (PID " + lockPid + "). Exiting.");
+    process.exit(0);
+  } catch (e) {
+    // Stale lock file — previous run didn't clean up. Continue.
+    console.log("Stale ampm lock file found (PID " + lockPid + "). Starting fresh.");
+  }
+}
+fs.writeFileSync(lockFile, String(process.pid));
+function cleanupLock() { try { fs.unlinkSync(lockFile); } catch (e) {} }
+process.on("exit", cleanupLock);
+process.on("SIGINT", function () { cleanupLock(); process.exit(0); });
+process.on("SIGTERM", function () { cleanupLock(); process.exit(0); });
+
 var args = [
   "--verbose",
   "--exitcrash",
