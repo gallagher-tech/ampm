@@ -7,6 +7,15 @@ var _ = require("lodash"); // Utilities. http://underscorejs.org/
 var child_process = require("child_process"); // http://nodejs.org/api/child_process.html
 var json = require("comment-json"); // https://www.npmjs.com/package/comment-json
 
+// Exit cleanly if another ampm instance is already running on these ports.
+process.on('uncaughtException', function(err) {
+  if (err.code === 'EADDRINUSE' || err.code === 'EACCES') {
+    console.error('ampm: port conflict (' + err.code + ' on ' + err.address + ':' + err.port + ') — another instance is likely running. Exiting.');
+    process.exit(0);
+  }
+  throw err;
+});
+
 var ConsoleState = require("./model/consoleState.cjs").ConsoleState;
 var BaseModel = require("./model/baseModel.cjs").BaseModel;
 var Network = require("./model/network.cjs").Network;

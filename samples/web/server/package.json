@@ -14,7 +14,9 @@
     "build": "echo \\\"No build specified\\\" && exit 0",
     "build:install": "./bin/build.cmd",
     "build:mac": "./bin/build.sh",
-    "copyandzip": "copyfiles -e='data/**/*' -e='logs/**/*' '**/*' '.env' ../build && bestzip ../build.zip ../build"
+    "copyandzip": "copyfiles -e='data/**/*' -e='logs/**/*' '**/*' '.env' ../build && bestzip ../build.zip ../build",
+    "ampm": "ampm ampm.json",
+    "ampm:dev": "ampm ampm.json dev"
   },
   "author": "G&A",
   "license": "ISC",
