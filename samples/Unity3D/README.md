@@ -5,7 +5,7 @@ Tested working with Unity 2022.3.31f1
 ## To open the project
 
 - Make sure you have Unity3D v5.3.4f1 or later
-- Start Unity3D; Browse and open the Unity Project in the "Source" folder
+- Start Unity3D; Browse and open the Unity Project in the "AMPMUnity" folder
 
 
 ## Download Unity Packages

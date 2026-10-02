@@ -1,7 +1,7 @@
 {
 	"default": {
 		"persistence": {
-			"launchCommand": "./Build/UnitySample.exe",
+			"launchCommand": "./Build/AMPMUnity.exe",
 			"maxMemory": 0,
 			"startupTimeout": 0,
 			"heartbeatTimeout": 0

@@ -144,3 +144,7 @@ xcuserdata
 *.xccheckout
 *.moved-aside
 *.xcuserstate
+
+# Unity sample: .meta files and Packages/ are part of the project and must be committed
+!/Unity3D/AMPMUnity/Packages/
+!/Unity3D/AMPMUnity/**/*.meta
