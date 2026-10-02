@@ -6,7 +6,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using UnityOSC;
-using SimpleJSON;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.IO;
 
 
@@ -21,10 +22,10 @@ namespace AmpmLib
 		public static event ConfigLoadHandler OnConfigLoaded;
 
         private static bool _Connected = false;
-		private static JSONNode _Config = null;
+		private static JObject _Config = null;
 
-		public static event EventHandler<JSONNode> ConfigLoaded; //<JSONNode>
-		public static event EventHandler<Tuple<string, JSONNode>> OnAmpmMessage;
+		public static event EventHandler<JObject> ConfigLoaded; //<JObject>
+		public static event EventHandler<Tuple<string, JToken>> OnAmpmMessage;
 
         // The OSC server to receive OSC messages.
 		private static readonly OSCServer _OscReceive;
@@ -81,7 +82,7 @@ namespace AmpmLib
                 }
 
                 // parse it as json
-                _Config = JSON.Parse(strContent);
+                _Config = JObject.Parse(strContent);
 
                 // fire OnConfigLoaded
                 if (OnConfigLoaded != null)
@@ -161,7 +162,7 @@ namespace AmpmLib
 			}
 			else
 			{
-				string d = JsonUtility.ToJson(data);
+				string d = JsonConvert.SerializeObject(data);
 				OSCHandler.Instance.SendMessageToClient("AMPM",name, d);
 			}
 		}
@@ -175,13 +176,22 @@ namespace AmpmLib
 
 			string name = e.Address.Replace("/", string.Empty);
 			string json = e.Data.FirstOrDefault() as string;
-			JSONNode data = null;
+			JToken data = null;
 			if (json != null)
 			{
-				data = JSON.Parse(json);
+				// Json.NET throws on malformed input. Catch it here so one bad message
+				// doesn't propagate into the OSC receive thread and stop it listening.
+				try
+				{
+					data = JToken.Parse(json);
+				}
+				catch (JsonReaderException ex)
+				{
+					Debug.LogWarning("AMPM: ignoring malformed JSON in '" + name + "' message: " + ex.Message);
+				}
 			}
 
-					OnAmpmMessage(null, new Tuple<string, JSONNode>(name, data));
+					OnAmpmMessage(null, new Tuple<string, JToken>(name, data));
 		}
 
 		[Serializable]
