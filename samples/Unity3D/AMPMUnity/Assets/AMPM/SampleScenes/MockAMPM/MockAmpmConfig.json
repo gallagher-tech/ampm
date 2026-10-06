@@ -1,0 +1,11 @@
+{
+  "network": {
+    "oscFromAppPort": 3002,
+    "oscToAppPort": 3003,
+    "socketToConsolePort": 8888
+  },
+  "customConfig": {
+    "attractTimeout": 60,
+    "language": "en"
+  }
+}
