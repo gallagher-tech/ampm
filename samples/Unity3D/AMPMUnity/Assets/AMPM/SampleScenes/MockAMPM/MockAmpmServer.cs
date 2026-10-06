@@ -628,7 +628,7 @@ namespace AmpmLib.Samples
 			if (_isEditor)
 			{
 				// End a freeze so the main thread can restart Play mode (see Update).
-				MockUnityHeartbeatTestUI.ReleaseFreeze();
+				HeartbeatTestUI.ReleaseFreeze();
 				return;
 			}
 

@@ -14,14 +14,14 @@ using Debug = UnityEngine.Debug;
 namespace AmpmLib.Samples
 {
 	/// <summary>
-	/// A mock Unity app for testing AMPM's heartbeat monitoring (the MockUnityHeartbeatTestUI Canvas
+	/// The app side of the AMPM heartbeat test scenes (the MockUnityHeartbeatTestUI and RealAMPMHeartbeatTestUI Canvas
 	/// prefab). Shows AMPM's status, its config, messages received from AMPM and the app's own log. Its
 	/// buttons exercise AMPM's heartbeat monitoring (restart, freeze, crash) and each has an
 	/// explanation of what should happen. With a MockAmpmServer in the scene the panel takes the
 	/// right half of the screen and its explanations describe the mock.
 	/// </summary>
 	[DefaultExecutionOrder(-30000)] // Start capturing the app log before anything else logs.
-	public class MockUnityHeartbeatTestUI : MonoBehaviour
+	public class HeartbeatTestUI : MonoBehaviour
 	{
 		[Header("Layout")]
 		[Tooltip("The scrolling panel. It takes the right half of the screen next to Mock AMPM, or the full width without it.")]
@@ -68,7 +68,7 @@ namespace AmpmLib.Samples
 		private const int MaxLogLines = 100;
 		private const int MaxLineLength = 300;
 		private const int MaxMessages = 20;
-		private const string Prefix = "[Mock Unity App] ";
+		private const string Prefix = "[Unity App] ";
 
 		// Set by Mock AMPM (from its background thread) to end a freeze so it can restart Play mode.
 		private static volatile bool _releaseFreeze;
