@@ -21,10 +21,12 @@ namespace AmpmLib.Samples
 	/// A stand-in for AMPM that runs inside the app, so the AMPM prefab can be tested without
 	/// installing AMPM. Like AMPM it receives heartbeats, logs and events, serves /config,
 	/// can send messages to the app, and restarts the app when heartbeats stop or it crashes.
-	/// MockAmpmPanel shows its state. Don't run it while real AMPM is running: both use the same ports.
+	/// MockAmpmPanel shows its state. It registers as AMPMTestToolsManager's stand-in, so the AMPM Test
+	/// button's Crash and Freeze Forever work in the Editor too. Don't run it while real AMPM is
+	/// running: both use the same ports.
 	/// </summary>
 	[DefaultExecutionOrder(-20000)] // Listen before AMPMManager connects and requests the config.
-	public class MockAmpmServer : MonoBehaviour
+	public class MockAmpmServer : MonoBehaviour, IAmpmStandIn
 	{
 		[Tooltip("JSON file served at /config, standing in for the config real AMPM builds from its ampm.json (MockAMPM/MockAmpmConfig.json by default). Its \"network\" ports also decide where the mock listens. Edit it before pressing Play.")]
 		[SerializeField]
@@ -105,6 +107,14 @@ namespace AmpmLib.Samples
 		private volatile bool _editorPaused;
 		private string _restartReason;
 		private bool _restartStarted;
+
+#if UNITY_EDITOR
+		// After a restart, keep trying to focus the Game view until this time (see Update).
+		private const float RefocusSeconds = 3f;
+		private const float RefocusInterval = 0.5f;
+		private float _refocusUntil;
+		private float _nextRefocus;
+#endif
 
 		public bool ListenForApp
 		{
@@ -229,6 +239,7 @@ namespace AmpmLib.Samples
 		private void Awake()
 		{
 			_isEditor = Application.isEditor;
+			AMPMTestToolsManager.StandIn = this;
 
 			// A test harness: keep updating when the window loses focus, so clicking another window
 			// doesn't stop the heartbeat and make the mock restart the app.
@@ -258,8 +269,11 @@ namespace AmpmLib.Samples
 			Debug.Log(Prefix + "The app was restarted by Mock AMPM: " + reason + ".");
 #if UNITY_EDITOR
 			// Play mode started from code leaves the Game view unfocused, and the UI ignores clicks
-			// while the app has no focus. Focus it, as pressing Play does.
+			// while the app has no focus. Focus it, as pressing Play does. A slow domain reload can
+			// swallow the first attempt, so Update keeps trying for a few seconds.
 			FocusGameView();
+			_refocusUntil = Time.realtimeSinceStartup + RefocusSeconds;
+			_nextRefocus = Time.realtimeSinceStartup + RefocusInterval;
 #endif
 		}
 
@@ -274,6 +288,22 @@ namespace AmpmLib.Samples
 			}
 
 #if UNITY_EDITOR
+			if (_refocusUntil > 0f)
+			{
+				if (Application.isFocused || Time.realtimeSinceStartup > _refocusUntil)
+				{
+					if (!Application.isFocused)
+						Debug.LogWarning(Prefix + "The Game view still isn't focused after the restart, so the UI ignores clicks. Click the Game view once. (Focused window: "
+							+ (EditorWindow.focusedWindow != null ? EditorWindow.focusedWindow.GetType().Name : "none") + ")");
+					_refocusUntil = 0f;
+				}
+				else if (Time.realtimeSinceStartup >= _nextRefocus)
+				{
+					_nextRefocus = Time.realtimeSinceStartup + RefocusInterval;
+					FocusGameView();
+				}
+			}
+
 			// In the Editor the restart happens here, on the main thread, once it's responsive again.
 			if (_restartRequested && !_restartStarted)
 			{
@@ -286,6 +316,8 @@ namespace AmpmLib.Samples
 		private void OnDestroy()
 		{
 			_running = false;
+			if (ReferenceEquals(AMPMTestToolsManager.StandIn, this))
+				AMPMTestToolsManager.StandIn = null;
 			StopListening();
 			StopConfigServer();
 #if UNITY_EDITOR
@@ -293,13 +325,13 @@ namespace AmpmLib.Samples
 #endif
 		}
 
-		// ---- Called by the test panel's Crash button ----
+		// ---- IAmpmStandIn: called by AMPMTestToolsManager's Crash ----
 
 		/// <summary>
 		/// Editor only: the app "crashed" without taking Unity down. Restart (or stop) Play mode,
 		/// like AMPM reacting to the app's process exiting.
 		/// </summary>
-		public void SimulateProcessExit()
+		public void SimulateCrash()
 		{
 			Debug.Log(Prefix + "The app's process exited (simulated crash).");
 			if (restartOnProcessExit)
@@ -628,7 +660,7 @@ namespace AmpmLib.Samples
 			if (_isEditor)
 			{
 				// End a freeze so the main thread can restart Play mode (see Update).
-				HeartbeatTestUI.ReleaseFreeze();
+				AMPMTestToolsManager.EndFreeze();
 				return;
 			}
 
@@ -704,11 +736,32 @@ namespace AmpmLib.Samples
 			EditorApplication.delayCall += () => EditorApplication.isPlaying = true;
 		}
 
+		// Gives the Game view a fresh focus, as clicking it does. If the Editor still counts it as
+		// focused from before the restart, focusing it again does nothing and Play mode stays
+		// unfocused, so focus another open window first and come back on the next Editor update.
 		private static void FocusGameView()
 		{
 			Type gameView = typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView");
-			if (gameView != null)
+			if (gameView == null)
+				return;
+
+			EditorWindow focused = EditorWindow.focusedWindow;
+			if (focused == null || focused.GetType() != gameView)
+			{
 				EditorWindow.FocusWindowIfItsOpen(gameView);
+				return;
+			}
+
+			foreach (string name in new[] { "UnityEditor.InspectorWindow", "UnityEditor.SceneHierarchyWindow", "UnityEditor.ProjectBrowser", "UnityEditor.ConsoleWindow" })
+			{
+				Type other = typeof(EditorWindow).Assembly.GetType(name);
+				if (other != null && Resources.FindObjectsOfTypeAll(other).Length > 0)
+				{
+					EditorWindow.FocusWindowIfItsOpen(other);
+					break;
+				}
+			}
+			EditorApplication.delayCall += () => EditorWindow.FocusWindowIfItsOpen(gameView);
 		}
 
 		private void OnPauseStateChanged(PauseState state)

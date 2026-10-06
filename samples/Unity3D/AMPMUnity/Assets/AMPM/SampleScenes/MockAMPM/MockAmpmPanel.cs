@@ -19,6 +19,7 @@ namespace AmpmLib.Samples
 		[SerializeField] private Text listenLabel;
 		[SerializeField] private Text serveLabel;
 		[SerializeField] private Text delayLabel;
+		[SerializeField] private Text restartTimeoutLabel;
 		[SerializeField] private Text sendMessageExplanation;
 
 		[Header("Optional buttons (shown by the flags on MockAmpmServer)")]
@@ -32,6 +33,7 @@ namespace AmpmLib.Samples
 		[SerializeField] private Toggle restartOnExitToggle;
 		[SerializeField] private Toggle showConfigToggle;
 		[SerializeField] private Slider delaySlider;
+		[SerializeField] private Slider restartTimeoutSlider;
 
 		private const float RefreshInterval = 0.25f;
 		private float _nextRefresh;
@@ -49,6 +51,7 @@ namespace AmpmLib.Samples
 			serveToggle.SetIsOnWithoutNotify(server.ServeConfig);
 			restartOnExitToggle.SetIsOnWithoutNotify(server.RestartOnProcessExit);
 			delaySlider.SetValueWithoutNotify(server.ConfigDelaySeconds);
+			restartTimeoutSlider.SetValueWithoutNotify(server.RestartTimeoutSeconds);
 
 			servedConfigText.text = server.ServedConfig;
 			servedConfigText.gameObject.SetActive(showConfigToggle.isOn);
@@ -83,6 +86,12 @@ namespace AmpmLib.Samples
 			Refresh();
 		}
 
+		public void SetRestartTimeout(float seconds)
+		{
+			server.RestartTimeoutSeconds = Mathf.Round(seconds);
+			Refresh();
+		}
+
 		public void SetRestartOnProcessExit(bool on)
 		{
 			server.RestartOnProcessExit = on;
@@ -112,6 +121,7 @@ namespace AmpmLib.Samples
 			listenLabel.text = "Listen for the app on port " + server.ListenPort;
 			serveLabel.text = "Serve the config on port " + server.ConfigPort;
 			delayLabel.text = "Config delay: " + AmpmSampleText.Seconds(server.ConfigDelaySeconds);
+			restartTimeoutLabel.text = "Restart timeout: " + AmpmSampleText.Seconds(server.RestartTimeoutSeconds);
 
 			// Checked on every refresh, so changing the flags in the Inspector during Play shows or hides them.
 			SetVisible(sendMessageButton, sendMessageExplanation, server.EnableSendMessageToApp);
@@ -151,8 +161,7 @@ namespace AmpmLib.Samples
 			builder.Append(AmpmSampleText.Line("Longest gap", stats.LongestGap.ToString("0.00") + " s")).Append('\n');
 
 			string restart = server.RestartStatus;
-			builder.Append(AmpmSampleText.Line("Restart", restart.StartsWith("Restarting") ? AmpmSampleText.Yellow(restart) : restart)).Append('\n');
-			builder.Append(AmpmSampleText.Line("Restart timeout", AmpmSampleText.Seconds(server.RestartTimeoutSeconds) + "  (set in the Mock Unity App, next to the freeze length)"));
+			builder.Append(AmpmSampleText.Line("Restart", restart.StartsWith("Restarting") ? AmpmSampleText.Yellow(restart) : restart));
 			return builder.ToString();
 		}
 	}

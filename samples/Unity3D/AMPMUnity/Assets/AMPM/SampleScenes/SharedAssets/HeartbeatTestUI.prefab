@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 1968022941950440058}
   - component: {fileID: 1880902044253503868}
   m_Layer: 5
-  m_Name: RealAMPMHeartbeatTestUI
+  m_Name: HeartbeatTestUI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -115,6 +115,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   panel: {fileID: 1956883601126691756}
+  realAmpmOnly:
+  - {fileID: 1776453252577827260}
+  - {fileID: 1671703355543525573}
+  titleText: {fileID: 1684586091104329087}
   subtitleText: {fileID: 1315057495048261167}
   clockText: {fileID: 1897698243393157811}
   heartbeatCounterText: {fileID: 1437563000644575527}
@@ -867,7 +871,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "<b>Intended BUILD ONLY.</b>\nInstructions:\n1. Build the scene\n2. Link launchCommand in ampm.real-ampm-heartbeat-test.json to the build's location\n3. Run ampm ampm.real-ampm-heartbeat-test.json\n4. Use the AMPM Test button to crash or freeze the app"
+  m_Text: "<b>Intended BUILD ONLY.</b>\nInstructions:\n1. Build the scene\n2. Link launchCommand in ampm.real-ampm-heartbeat-test.json to the build's location\n3. Run ampm ampm.real-ampm-heartbeat-test.json\n4. Use the AMPM Test button to restart, crash or freeze the app"
 --- !u!1 &1992114426078985236
 GameObject:
   m_ObjectHideFlags: 0

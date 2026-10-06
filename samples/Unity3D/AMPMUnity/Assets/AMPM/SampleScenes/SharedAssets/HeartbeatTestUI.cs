@@ -1,24 +1,19 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Text;
-using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
-using UnityEngine.Diagnostics;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using Debug = UnityEngine.Debug;
 
 namespace AmpmLib.Samples
 {
 	/// <summary>
-	/// The app side of the AMPM heartbeat test scenes (the MockUnityHeartbeatTestUI and RealAMPMHeartbeatTestUI Canvas
-	/// prefab). Shows AMPM's status, its config, messages received from AMPM and the app's own log. Its
-	/// buttons exercise AMPM's heartbeat monitoring (restart, freeze, crash) and each has an
-	/// explanation of what should happen. With a MockAmpmServer in the scene the panel takes the
-	/// right half of the screen and its explanations describe the mock.
+	/// The app side of the AMPM heartbeat test scenes (the HeartbeatTestUI Canvas prefab): shows a clock
+	/// that stops while the app is frozen, the heartbeats sent, AMPM's status, its config, messages
+	/// received from AMPM and the app's own log. The tests themselves (restart, crash, freeze) are on
+	/// the AMPMTestToolsManager prefab's AMPM Test button. With a MockAmpmServer in the scene the panel
+	/// takes the right half of the screen and the real-AMPM build instructions are hidden.
 	/// </summary>
 	[DefaultExecutionOrder(-30000)] // Start capturing the app log before anything else logs.
 	public class HeartbeatTestUI : MonoBehaviour
@@ -28,7 +23,12 @@ namespace AmpmLib.Samples
 		[SerializeField]
 		private RectTransform panel;
 
+		[Tooltip("Shown only with real AMPM (no MockAmpmServer in the scene), e.g. the build instructions.")]
+		[SerializeField]
+		private GameObject[] realAmpmOnly;
+
 		[Header("Live text")]
+		[SerializeField] private Text titleText;
 		[SerializeField] private Text subtitleText;
 		[Tooltip("Updated every frame, so it visibly stops while the app is frozen.")]
 		[SerializeField] private Text clockText;
@@ -38,128 +38,54 @@ namespace AmpmLib.Samples
 		[SerializeField] private Text messagesText;
 		[SerializeField] private Text appLogText;
 
-		[Header("Explanations under the buttons")]
-		[SerializeField] private Text restartExplanation;
-		[SerializeField] private Text freezeExplanation;
-		[SerializeField] private Text freezeForeverExplanation;
-		[SerializeField] private Text crashExplanation;
-
-		[Header("Freeze")]
-		[Tooltip("Default length of the timed freeze, in seconds.")]
-		[Range(1f, 30f)]
-		[SerializeField]
-		private float freezeSeconds = 10f;
-
-		[SerializeField] private Slider freezeSlider;
-		[SerializeField] private Text freezeLengthText;
-		[SerializeField] private Text freezeButtonText;
-		[SerializeField] private Button freezeForeverButton;
-		[SerializeField] private Button crashButton;
-
-		[Header("Mock AMPM restart timeout (next to the freeze length, since the two decide whether a restart happens)")]
-		[SerializeField] private GameObject restartTimeoutRow;
-		[SerializeField] private Slider restartTimeoutSlider;
-		[SerializeField] private Text restartTimeoutLabel;
-		[SerializeField] private Text restartTimeoutExplanation;
-
-		// In the Editor, Freeze Forever ends on its own after this long, so Unity can never lock up for good.
-		private const float EditorFreezeSafetySeconds = 60f;
 		private const float RefreshInterval = 0.25f;
 		private const int MaxLogLines = 100;
 		private const int MaxLineLength = 300;
 		private const int MaxMessages = 20;
-		private const string Prefix = "[Unity App] ";
-
-		// Set by Mock AMPM (from its background thread) to end a freeze so it can restart Play mode.
-		private static volatile bool _releaseFreeze;
-
-		// Set at the same time and never cleared during this run: a restart is on its way, so Restart,
-		// Freeze and Crash are ignored. Otherwise a click queued while the app was frozen can freeze it
-		// again before Play mode restarts, and Unity hangs.
-		private static volatile bool _restartPending;
-
-		// Raised so a click whose pointer moves a little isn't taken as a scroll drag and cancelled.
-		private const int MinDragThreshold = 20;
 
 		private readonly List<string> _log = new List<string>();
 		private readonly List<string> _messages = new List<string>();
 		private volatile bool _logChanged = true;
 		private bool _messagesChanged = true;
-		private MockAmpmServer _mock;
+		private bool _hasMock;
 		private float _nextRefresh;
 		private long _lastHeartbeatCount;
 		private float _lastRateTime;
 		private float _heartbeatRate;
 
-		/// <summary>
-		/// Ends a running freeze. Mock AMPM calls this so the main thread can restart Play mode.
-		/// </summary>
-		public static void ReleaseFreeze()
-		{
-			_restartPending = true;
-			_releaseFreeze = true;
-		}
-
-		// Statics survive between play sessions when the domain reload is skipped.
-		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-		private static void ResetStatics()
-		{
-			_releaseFreeze = false;
-			_restartPending = false;
-		}
-
-		private bool IgnoreWhileRestarting(string action)
-		{
-			if (!_restartPending)
-				return false;
-			Debug.Log(Prefix + action + " ignored: Mock AMPM is already restarting the app.");
-			return true;
-		}
-
 		private void Awake()
 		{
 			Application.logMessageReceivedThreaded += OnLogMessage;
-			_mock = FindAnyObjectByType<MockAmpmServer>();
+			_hasMock = FindAnyObjectByType<MockAmpmServer>() != null;
 			AmpmSampleLayout.FillParent(transform);
 
-			// Without the mock, use the whole screen.
-			if (_mock == null && panel != null)
+			// The right half of the screen next to Mock AMPM (which takes the left half), or the whole screen.
+			if (panel != null)
 			{
 				const float margin = 10f;
-				panel.anchorMin = new Vector2(0f, panel.anchorMin.y);
+				panel.anchorMin = new Vector2(_hasMock ? 0.5f : 0f, panel.anchorMin.y);
 				panel.anchorMax = new Vector2(1f, panel.anchorMax.y);
-				panel.offsetMin = new Vector2(margin, panel.offsetMin.y);
+				panel.offsetMin = new Vector2(_hasMock ? margin / 2f : margin, panel.offsetMin.y);
 				panel.offsetMax = new Vector2(-margin, panel.offsetMax.y);
+			}
+
+			if (realAmpmOnly != null)
+			{
+				foreach (GameObject item in realAmpmOnly)
+				{
+					if (item != null)
+						item.SetActive(!_hasMock);
+				}
 			}
 		}
 
 		private void Start()
 		{
-			// Without a mock to end it, Freeze Forever (and a real crash) would take Unity down with the app.
-			// The buttons, slider and explanations are optional: the RealAMPM status-only prefab has none.
-			bool allowedHere = !(Application.isEditor && _mock == null);
-			if (freezeForeverButton != null)
-				freezeForeverButton.interactable = allowedHere;
-			if (crashButton != null)
-				crashButton.interactable = allowedHere;
-
-			EventSystem eventSystem = EventSystem.current;
-			if (eventSystem != null && eventSystem.pixelDragThreshold < MinDragThreshold)
-				eventSystem.pixelDragThreshold = MinDragThreshold;
-
-			if (freezeSlider != null)
-				freezeSlider.SetValueWithoutNotify(freezeSeconds);
-
-			// The restart timeout belongs to Mock AMPM; with real AMPM it's heartbeatTimeout in ampm.json.
-			// The row is optional: the RealAMPM prefab doesn't have it.
-			if (restartTimeoutRow != null)
-				restartTimeoutRow.SetActive(_mock != null);
-			if (restartTimeoutExplanation != null)
-				restartTimeoutExplanation.gameObject.SetActive(_mock != null);
-			if (_mock != null && restartTimeoutSlider != null)
-				restartTimeoutSlider.SetValueWithoutNotify(_mock.RestartTimeoutSeconds);
-			subtitleText.text = (_mock != null ? "Talking to Mock AMPM (left)." : "Talking to real AMPM.")
-				+ (Application.isEditor ? " Running in the Editor." : " Running in a build.");
+			if (titleText != null)
+				titleText.text = _hasMock ? "Unity App - Mock AMPM Heartbeat Test" : "Unity App - Real AMPM Heartbeat Test";
+			subtitleText.text = (_hasMock ? "Talking to Mock AMPM (left)." : "Talking to real AMPM.")
+				+ (Application.isEditor ? " Running in the Editor." : " Running in a build.")
+				+ " Use the AMPM Test button to restart, crash or freeze the app.";
 			Refresh();
 		}
 
@@ -201,58 +127,6 @@ namespace AmpmLib.Samples
 				Refresh();
 		}
 
-		// ---- Called by the prefab's buttons and slider ----
-
-		public void RequestRestart()
-		{
-			if (IgnoreWhileRestarting("Restart"))
-				return;
-			Debug.Log(Prefix + "Asking AMPM to restart the app.");
-			AMPM.Restart();
-		}
-
-		public void SetFreezeSeconds(float seconds)
-		{
-			freezeSeconds = Mathf.Round(seconds);
-			Refresh();
-		}
-
-		public void SetRestartTimeout(float seconds)
-		{
-			if (_mock == null)
-				return;
-			_mock.RestartTimeoutSeconds = Mathf.Round(seconds);
-			Refresh();
-		}
-
-		public void FreezeTimed()
-		{
-			Freeze(freezeSeconds);
-		}
-
-		public void FreezeForever()
-		{
-			Freeze(0f);
-		}
-
-		public void Crash()
-		{
-			if (IgnoreWhileRestarting("Crash"))
-				return;
-			if (_mock != null && Application.isEditor)
-			{
-				_mock.SimulateProcessExit();
-				return;
-			}
-
-			Debug.Log(Prefix + "Crashing the app now." + (_mock == null ? " If restartOnProcessExit is true in ampm.json, AMPM should relaunch it." : ""));
-			if (_mock != null)
-				_mock.PrepareForCrash();
-
-			Thread.Sleep(200); // Give the log lines time to reach Player.log.
-			Utils.ForceCrash(ForcedCrashCategory.AccessViolation);
-		}
-
 		// ---- Display ----
 
 		private void Refresh()
@@ -260,21 +134,6 @@ namespace AmpmLib.Samples
 			_nextRefresh = Time.realtimeSinceStartup + RefreshInterval;
 
 			statusText.text = BuildStatus();
-
-			SetText(restartExplanation, ExplainRestart());
-			SetText(freezeExplanation, ExplainFreeze());
-			SetText(freezeForeverExplanation, ExplainFreezeForever());
-			SetText(crashExplanation, ExplainCrash());
-
-			SetText(freezeLengthText, "Freeze length: " + AmpmSampleText.Seconds(freezeSeconds));
-			SetText(freezeButtonText, "Freeze for " + AmpmSampleText.Seconds(freezeSeconds));
-
-			if (_mock != null && restartTimeoutLabel != null && restartTimeoutExplanation != null)
-			{
-				restartTimeoutLabel.text = "Mock restart timeout: " + AmpmSampleText.Seconds(_mock.RestartTimeoutSeconds);
-				restartTimeoutExplanation.text = "How long Mock AMPM waits without a heartbeat before it restarts the app, like heartbeatTimeout in ampm.json. 0 = never. "
-					+ "A freeze longer than this timeout causes a restart.";
-			}
 
 			if (configText.text.Length == 0 || !AMPM.IsConfigLoaded)
 				configText.text = AMPM.IsConfigLoaded ? AMPM.Config.ToString(Formatting.Indented)
@@ -302,12 +161,6 @@ namespace AmpmLib.Samples
 			}
 		}
 
-		private static void SetText(Text text, string value)
-		{
-			if (text != null)
-				text.text = value;
-		}
-
 		private string BuildStatus()
 		{
 			var lines = new List<string>();
@@ -320,113 +173,6 @@ namespace AmpmLib.Samples
 			lines.Add(AmpmSampleText.Line("Send port", AMPM.SendPort.ToString()));
 			lines.Add(AmpmSampleText.Line("Last send error", AMPM.LastSendError == null ? "None" : AmpmSampleText.Red(AMPM.LastSendError) + "  (" + AmpmSampleText.Ago(AMPM.LastSendErrorTime.Value) + ")"));
 			return string.Join("\n", lines);
-		}
-
-		private string ExplainRestart()
-		{
-			if (_mock == null)
-				return "Asks AMPM to restart the app: AMPM closes it and runs its launchCommand again. Only works for a build that AMPM launched.";
-			return Application.isEditor
-				? "Asks AMPM to restart the app. The mock logs \"AMPM is restarting the app\" and restarts Play mode."
-				: "Asks AMPM to restart the app. The mock logs \"AMPM is restarting the app\", closes this app and launches it again.";
-		}
-
-		private string ExplainFreeze()
-		{
-			string length = AmpmSampleText.Seconds(freezeSeconds);
-			if (_mock == null)
-				return "Blocks the app for " + length + ", so heartbeats stop. If AMPM launched this build and its heartbeatTimeout is shorter than " + length + ", AMPM restarts the app.";
-
-			float timeout = _mock.RestartTimeoutSeconds;
-			if (timeout <= 0f || timeout >= freezeSeconds)
-				return "Blocks the app for " + length + ", so heartbeats stop. The mock's restart timeout (" + AmpmSampleText.Seconds(timeout) + ") isn't shorter than the freeze, so the app should recover without a restart.";
-
-			return "Blocks the app for " + length + ", so heartbeats stop. After " + AmpmSampleText.Seconds(timeout) + " the mock logs \"AMPM is restarting the app\" and "
-				+ (Application.isEditor ? "ends the freeze and restarts Play mode." : "closes this app and launches it again.");
-		}
-
-		private string ExplainFreezeForever()
-		{
-			if (_mock == null)
-			{
-				return Application.isEditor
-					? "Disabled in the Editor: it would hang Unity. Try it in a build launched by AMPM."
-					: "Blocks the app permanently. AMPM restarts it once its heartbeatTimeout passes (if heartbeatTimeout is set in ampm.json).";
-			}
-
-			float timeout = _mock.RestartTimeoutSeconds;
-			if (timeout <= 0f)
-				return "Blocks the app permanently, and the mock's restart timeout is off, so nothing restarts it." + (Application.isEditor ? " In the Editor it gives up after 60 s." : "");
-
-			return Application.isEditor
-				? "Blocks the app (and Unity) until the mock logs \"AMPM is restarting the app\" after " + AmpmSampleText.Seconds(timeout) + " and restarts Play mode. If the mock isn't listening, it gives up after 60 s."
-				: "Blocks the app permanently. After " + AmpmSampleText.Seconds(timeout) + " the mock logs \"AMPM is restarting the app\", closes it and launches it again.";
-		}
-
-		private string ExplainCrash()
-		{
-			if (_mock == null)
-			{
-				return Application.isEditor
-					? "Disabled in the Editor: it would crash Unity. Try it in a build launched by AMPM."
-					: "Crashes the app for real. AMPM relaunches it if restartOnProcessExit is true in ampm.json.";
-			}
-
-			if (Application.isEditor)
-			{
-				return "Simulates a crash (Unity itself isn't crashed). " + (_mock.RestartOnProcessExit
-					? "The mock sees the app exit, logs \"AMPM is restarting the app\" and restarts Play mode."
-					: "Restart On Process Exit is off on the mock, so Play mode just stops.");
-			}
-
-			return "Crashes the app for real. " + (_mock.RestartOnProcessExit
-				? "The mock logs \"AMPM is restarting the app\" and arranges a relaunch first, like AMPM's restartOnProcessExit."
-				: "Restart On Process Exit is off on the mock, so nothing relaunches it.");
-		}
-
-		// ---- Freeze ----
-
-		// Blocks the main thread like a real hang. seconds <= 0 means forever.
-		private void Freeze(float seconds)
-		{
-			if (IgnoreWhileRestarting(seconds <= 0f ? "Freeze Forever" : "Freeze"))
-				return;
-
-			bool forever = seconds <= 0f;
-			Debug.Log(Prefix + (forever ? "Freezing the app permanently. " : "Freezing the app for " + AmpmSampleText.Seconds(seconds) + ". ") + FreezeExpectation(forever, seconds));
-
-			_releaseFreeze = false;
-			bool editor = Application.isEditor;
-			Stopwatch watch = Stopwatch.StartNew();
-			while (!_releaseFreeze)
-			{
-				double elapsed = watch.Elapsed.TotalSeconds;
-				if (!forever && elapsed >= seconds)
-					break;
-				if (forever && editor && elapsed >= EditorFreezeSafetySeconds)
-				{
-					Debug.LogWarning(Prefix + "Freeze Forever ended after " + EditorFreezeSafetySeconds + " s because nothing restarted the app. In the Editor it never lasts longer.");
-					break;
-				}
-				Thread.Sleep(10);
-			}
-
-			if (_releaseFreeze)
-				Debug.Log(Prefix + "Mock AMPM ended the freeze so it can restart Play mode.");
-			else if (!forever)
-				Debug.Log(Prefix + "The freeze ended after " + AmpmSampleText.Seconds(seconds) + " without a restart.");
-			_releaseFreeze = false;
-		}
-
-		private string FreezeExpectation(bool forever, float seconds)
-		{
-			if (_mock == null)
-				return "If AMPM's heartbeatTimeout is shorter" + (forever ? "" : " than " + AmpmSampleText.Seconds(seconds)) + ", AMPM should restart the app.";
-
-			float timeout = _mock.RestartTimeoutSeconds;
-			if (timeout <= 0f || (!forever && timeout >= seconds))
-				return "Mock AMPM shouldn't restart the app.";
-			return "Mock AMPM should restart the app after " + AmpmSampleText.Seconds(timeout) + " without a heartbeat.";
 		}
 
 		// ---- Events ----
