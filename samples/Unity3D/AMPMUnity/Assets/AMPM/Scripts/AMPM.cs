@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using OscJack;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -25,7 +26,7 @@ namespace AmpmLib
 		// Repeating warnings (e.g. a send failing every frame) are logged at most this often.
 		private static readonly TimeSpan WarningInterval = TimeSpan.FromSeconds(10);
 
-		// Escape non-ASCII characters (é -> é): OscJack writes one byte per character, and
+		// Escape non-ASCII characters as \uXXXX sequences: OscJack writes one byte per character, and
 		// AMPM's JSON.parse turns the escapes back into the original characters.
 		private static readonly JsonSerializerSettings JsonSettings = new JsonSerializerSettings
 		{
@@ -58,6 +59,32 @@ namespace AmpmLib
 		}
 
 		public static event EventHandler<Tuple<string, JToken>> OnAmpmMessage;
+
+		/// <summary>Whether <see cref="Initialize"/> succeeded (false again after the app quits).</summary>
+		public static bool IsInitialized { get { return _Initialized; } }
+
+		/// <summary>Whether the config has arrived from AMPM.</summary>
+		public static bool IsConfigLoaded { get { return Config != null; } }
+
+		/// <summary>Whether the app is listening for messages from AMPM.</summary>
+		public static bool IsListening { get { return _OscReceive != null; } }
+
+		/// <summary>The port heartbeats, logs and events are sent to, or 0 before Initialize.</summary>
+		public static int SendPort { get { return _Settings != null ? _Settings.sendPort : 0; } }
+
+		/// <summary>The port the app listens on, or 0 when it isn't listening.</summary>
+		public static int ListenPort { get { return IsListening ? _Settings.listenPort : 0; } }
+
+		/// <summary>How many heartbeats have been sent successfully this run.</summary>
+		public static long HeartbeatsSent { get { return Interlocked.Read(ref _HeartbeatsSent); } }
+
+		/// <summary>The most recent send error, or null if no send has failed this run.</summary>
+		public static string LastSendError { get; private set; }
+
+		/// <summary>When <see cref="LastSendError"/> happened (local time), or null.</summary>
+		public static DateTime? LastSendErrorTime { get; private set; }
+
+		private static long _HeartbeatsSent;
 
 		// The settings passed to Initialize.
 		private static AmpmSettings _Settings;
@@ -152,6 +179,9 @@ namespace AmpmLib
 			_LastSendWarning = DateTime.MinValue;
 			_SuppressedSendWarnings = 0;
 			_WarnedNotInitialized = false;
+			_HeartbeatsSent = 0;
+			LastSendError = null;
+			LastSendErrorTime = null;
 		}
 
 		private static void Close()
@@ -223,7 +253,8 @@ namespace AmpmLib
 		/// </summary>
 		public static void Heart()
 		{
-			UdpEvent("heart");
+			if (Send("heart", ""))
+				Interlocked.Increment(ref _HeartbeatsSent);
 		}
 
 		/// <summary>
@@ -360,6 +391,9 @@ namespace AmpmLib
 			string suppressed;
 			lock (_WarningLock)
 			{
+				LastSendError = ex.Message;
+				LastSendErrorTime = DateTime.Now;
+
 				DateTime now = DateTime.UtcNow;
 				if (now - _LastSendWarning < WarningInterval)
 				{
