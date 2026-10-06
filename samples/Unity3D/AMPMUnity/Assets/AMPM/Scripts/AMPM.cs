@@ -1,8 +1,6 @@
 ﻿using UnityEngine;
-using System.Collections;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using OscJack;
@@ -18,10 +16,12 @@ namespace AmpmLib
 	/// </summary>
 	public static class AMPM
 	{
+		// Log levels. AMPM's server calls logger[level], so ToServerName must return its exact method names.
+		private enum EventLevel { Error, Warn, Info }
+
 		public delegate void ConfigLoadHandler();
 		public static event ConfigLoadHandler OnConfigLoaded;
 
-        private static bool _Connected = false;
 		private static JObject _Config = null;
 
 		public static event EventHandler<JObject> ConfigLoaded; //<JObject>
@@ -41,7 +41,7 @@ namespace AmpmLib
 
 		static AMPM()
 		{
-			// Create a OSC Reciever to receive UDP messages
+			// Create a OSC Receiver to receive UDP messages
 			_OscReceive = new OscServer(3003);
 
 			// Handle incoming OSC messages. An empty address receives every message.
@@ -139,7 +139,17 @@ namespace AmpmLib
 
 		private static void LogMessage(EventLevel eventLevel, string message)
 		{
-			UdpEvent("log", new { level = eventLevel.ToString(), message = message });
+			UdpEvent("log", new { level = ToServerName(eventLevel), message = message });
+		}
+
+		private static string ToServerName(EventLevel level)
+		{
+			switch (level)
+			{
+				case EventLevel.Error: return "error";
+				case EventLevel.Warn: return "warn";
+				default: return "info";
+			}
 		}
 
 		/// <summary>
@@ -201,7 +211,8 @@ namespace AmpmLib
 				return;
 			}
 
-			string name = address.Replace("/", string.Empty);
+			// Strip only the leading slash so nested addresses like "/app/restart" keep their structure.
+			string name = address.StartsWith("/") ? address.Substring(1) : address;
 			string json = oscData.GetElementCount() > 0 ? oscData.GetElementAsString(0) : null;
 			JToken data = null;
 			if (json != null)
@@ -221,7 +232,6 @@ namespace AmpmLib
 					OnAmpmMessage(null, new Tuple<string, JToken>(name, data));
 		}
 
-		[Serializable]
 		private class TrackEvent
 		{
 			public string Category;
