@@ -136,20 +136,27 @@ namespace AmpmLib.Samples
 		private void Start()
 		{
 			// Without a mock to end it, Freeze Forever (and a real crash) would take Unity down with the app.
+			// The buttons, slider and explanations are optional: the RealAMPM status-only prefab has none.
 			bool allowedHere = !(Application.isEditor && _mock == null);
-			freezeForeverButton.interactable = allowedHere;
-			crashButton.interactable = allowedHere;
+			if (freezeForeverButton != null)
+				freezeForeverButton.interactable = allowedHere;
+			if (crashButton != null)
+				crashButton.interactable = allowedHere;
 
 			EventSystem eventSystem = EventSystem.current;
 			if (eventSystem != null && eventSystem.pixelDragThreshold < MinDragThreshold)
 				eventSystem.pixelDragThreshold = MinDragThreshold;
 
-			freezeSlider.SetValueWithoutNotify(freezeSeconds);
+			if (freezeSlider != null)
+				freezeSlider.SetValueWithoutNotify(freezeSeconds);
 
 			// The restart timeout belongs to Mock AMPM; with real AMPM it's heartbeatTimeout in ampm.json.
-			restartTimeoutRow.SetActive(_mock != null);
-			restartTimeoutExplanation.gameObject.SetActive(_mock != null);
-			if (_mock != null)
+			// The row is optional: the RealAMPM prefab doesn't have it.
+			if (restartTimeoutRow != null)
+				restartTimeoutRow.SetActive(_mock != null);
+			if (restartTimeoutExplanation != null)
+				restartTimeoutExplanation.gameObject.SetActive(_mock != null);
+			if (_mock != null && restartTimeoutSlider != null)
 				restartTimeoutSlider.SetValueWithoutNotify(_mock.RestartTimeoutSeconds);
 			subtitleText.text = (_mock != null ? "Talking to Mock AMPM (left)." : "Talking to real AMPM.")
 				+ (Application.isEditor ? " Running in the Editor." : " Running in a build.");
@@ -254,15 +261,15 @@ namespace AmpmLib.Samples
 
 			statusText.text = BuildStatus();
 
-			restartExplanation.text = ExplainRestart();
-			freezeExplanation.text = ExplainFreeze();
-			freezeForeverExplanation.text = ExplainFreezeForever();
-			crashExplanation.text = ExplainCrash();
+			SetText(restartExplanation, ExplainRestart());
+			SetText(freezeExplanation, ExplainFreeze());
+			SetText(freezeForeverExplanation, ExplainFreezeForever());
+			SetText(crashExplanation, ExplainCrash());
 
-			freezeLengthText.text = "Freeze length: " + AmpmSampleText.Seconds(freezeSeconds);
-			freezeButtonText.text = "Freeze for " + AmpmSampleText.Seconds(freezeSeconds);
+			SetText(freezeLengthText, "Freeze length: " + AmpmSampleText.Seconds(freezeSeconds));
+			SetText(freezeButtonText, "Freeze for " + AmpmSampleText.Seconds(freezeSeconds));
 
-			if (_mock != null)
+			if (_mock != null && restartTimeoutLabel != null && restartTimeoutExplanation != null)
 			{
 				restartTimeoutLabel.text = "Mock restart timeout: " + AmpmSampleText.Seconds(_mock.RestartTimeoutSeconds);
 				restartTimeoutExplanation.text = "How long Mock AMPM waits without a heartbeat before it restarts the app, like heartbeatTimeout in ampm.json. 0 = never. "
@@ -293,6 +300,12 @@ namespace AmpmLib.Samples
 					appLogText.text = builder.ToString();
 				}
 			}
+		}
+
+		private static void SetText(Text text, string value)
+		{
+			if (text != null)
+				text.text = value;
 		}
 
 		private string BuildStatus()
