@@ -6,6 +6,8 @@ public class AmpmCommunicator : MonoBehaviour {
 
 	// Use this for initialization
 	void OnEnable () {
+		// AMPM now needs an explicit Initialize. AmpmCommunicator is superseded by AMPMManager and will be removed.
+		AMPM.Initialize(new AmpmSettings());
 		AMPM.OnConfigLoaded += ParseConfig;
 		AMPM.GetConfig();
 		//StartHeartBeat();

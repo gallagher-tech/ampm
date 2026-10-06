@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -13,11 +13,25 @@ namespace AmpmLib
 {
 	/// <summary>
 	/// Interface for sending things to ampm.
+	/// Call <see cref="Initialize"/> once before anything else; the AMPM prefab (AMPMManager) does this for you.
 	/// </summary>
 	public static class AMPM
 	{
 		// Log levels. AMPM's server calls logger[level], so ToServerName must return its exact method names.
 		private enum EventLevel { Error, Warn, Info }
+
+		// OscJack builds every packet in a fixed 4096-byte buffer.
+		private const int OscBufferSize = 4096;
+
+		// Repeating warnings (e.g. a send failing every frame) are logged at most this often.
+		private static readonly TimeSpan WarningInterval = TimeSpan.FromSeconds(10);
+
+		// Escape non-ASCII characters (é -> é): OscJack writes one byte per character, and
+		// AMPM's JSON.parse turns the escapes back into the original characters.
+		private static readonly JsonSerializerSettings JsonSettings = new JsonSerializerSettings
+		{
+			StringEscapeHandling = StringEscapeHandling.EscapeNonAscii
+		};
 
 		public delegate void ConfigLoadHandler();
 		public static event ConfigLoadHandler OnConfigLoaded;
@@ -27,39 +41,107 @@ namespace AmpmLib
 		public static event EventHandler<JObject> ConfigLoaded; //<JObject>
 		public static event EventHandler<Tuple<string, JToken>> OnAmpmMessage;
 
-        // The OSC server to receive OSC messages.
+		// The settings passed to Initialize.
+		private static AmpmSettings _Settings;
+
+		// Whether Initialize has completed (cleared again when the app quits).
+		private static bool _Initialized;
+
+		// The OSC server to receive OSC messages. Null unless Listen For Messages is on.
 		private static OscServer _OscReceive;
 
 		// The OSC client to send OSC messages to the local node.js server.
 		private static OscClient _OscSend;
 
-		// The destination for OSC messages to the local node.js server.
-		private static IPAddress ipAddress;
+		// OscJack's client isn't thread-safe, so sending and closing are serialized on this lock.
+		private static readonly object _SendLock = new object();
 
-        private static Queue<Tuple<string, object>> _MessageQueue = new Queue<Tuple<string, object>>();
-			
+		private static Queue<Tuple<string, object>> _MessageQueue = new Queue<Tuple<string, object>>();
 
-		static AMPM()
+		// Rate limiting for the send-failure warning.
+		private static readonly object _WarningLock = new object();
+		private static DateTime _LastSendWarning = DateTime.MinValue;
+		private static int _SuppressedSendWarnings;
+
+		// Messages sent before Initialize are skipped; only the first one is reported.
+		private static bool _WarnedNotInitialized;
+
+		/// <summary>
+		/// Opens the connection to AMPM. Calls after the first successful one are ignored.
+		/// </summary>
+		/// <returns>True if this call initialized AMPM.</returns>
+		public static bool Initialize(AmpmSettings settings)
 		{
-			// Create a OSC Receiver to receive UDP messages
-			_OscReceive = new OscServer(3003);
+			if (_Initialized)
+			{
+				Debug.LogWarning("AMPM: Initialize was called again and has been ignored. AMPM is already initialized.");
+				return false;
+			}
 
-			// Handle incoming OSC messages. An empty address receives every message.
-			_OscReceive.MessageDispatcher.AddCallback(string.Empty, Server_MessageReceived);
+			_Settings = (settings ?? new AmpmSettings()).Clone();
 
-			ipAddress = GetLocalIPAddress();
-            _OscSend = new OscClient(ipAddress.ToString(), 3002); // Creating a client to send messages on
+			try
+			{
+				_OscSend = new OscClient(ResolveHost(_Settings.host), _Settings.sendPort);
+			}
+			catch (Exception ex)
+			{
+				Debug.LogError("AMPM: couldn't set up sending to " + _Settings.host + ":" + _Settings.sendPort + ". " + ex.Message);
+				return false;
+			}
+
+			if (_Settings.listenForMessages)
+			{
+				try
+				{
+					// Create a OSC Receiver to receive UDP messages
+					_OscReceive = new OscServer(_Settings.listenPort);
+
+					// Handle incoming OSC messages. An empty address receives every message.
+					_OscReceive.MessageDispatcher.AddCallback(string.Empty, Server_MessageReceived);
+				}
+				catch (Exception ex)
+				{
+					// Keep sending even if listening fails, e.g. because the port is already in use.
+					Debug.LogError("AMPM: couldn't listen for messages on port " + _Settings.listenPort + ". " + ex.Message);
+					_OscReceive = null;
+				}
+			}
+
+			_Initialized = true;
 
 			// Close the client and server when the app quits (or play mode stops in the editor).
-			Application.quitting += CloseOsc;
+			Application.quitting -= Close;
+			Application.quitting += Close;
+			return true;
 		}
 
-		private static void CloseOsc()
+		// Statics survive between play sessions when Unity's "Enter Play Mode Options" skip the
+		// domain reload, so start every run from a clean state.
+		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+		private static void ResetState()
 		{
-			if (_OscSend != null)
+			Close();
+			_Settings = null;
+			_Config = null;
+			OnConfigLoaded = null;
+			ConfigLoaded = null;
+			OnAmpmMessage = null;
+			_MessageQueue.Clear();
+			_LastSendWarning = DateTime.MinValue;
+			_SuppressedSendWarnings = 0;
+			_WarnedNotInitialized = false;
+		}
+
+		private static void Close()
+		{
+			lock (_SendLock)
 			{
-				_OscSend.Dispose();
-				_OscSend = null;
+				if (_OscSend != null)
+				{
+					_OscSend.Dispose();
+					_OscSend = null;
+				}
 			}
 
 			if (_OscReceive != null)
@@ -67,29 +149,31 @@ namespace AmpmLib
 				_OscReceive.Dispose();
 				_OscReceive = null;
 			}
+
+			_Initialized = false;
 		}
 
-        public static IPAddress GetLocalIPAddress()
-        {
-            IPHostEntry host;
-            try
-            {
-                 host = Dns.GetHostEntry("127.0.0.1");
-            }
-            catch(System.Net.Sockets.SocketException ex)
-            {
-                return new IPAddress(new byte[]{ 127,0,0,1 });
-            }
-            foreach (var ip in host.AddressList)
-            {
-                if (ip.AddressFamily == AddressFamily.InterNetwork)
-                {
-                    return ip;
-                }
-            }
-            throw new Exception("Local IP Address Not Found!");
-        }
-        public static void GetConfig(string url = "http://localhost:8888/config") {
+		// OscJack needs an IPv4 address; also accept host names such as "localhost".
+		private static string ResolveHost(string host)
+		{
+			if (IPAddress.TryParse(host, out IPAddress address))
+				return address.ToString();
+
+			foreach (IPAddress candidate in Dns.GetHostAddresses(host))
+			{
+				if (candidate.AddressFamily == AddressFamily.InterNetwork)
+					return candidate.ToString();
+			}
+			throw new Exception("No IPv4 address found for host '" + host + "'.");
+		}
+
+        public static void GetConfig(string url = null) {
+			if (url == null)
+			{
+				AmpmSettings settings = _Settings ?? new AmpmSettings();
+				url = "http://" + settings.host + ":" + settings.configPort + "/config";
+			}
+
 			try
 			{
                 // load the url
@@ -125,6 +209,14 @@ namespace AmpmLib
 		}
 
 		/// <summary>
+		/// Ask AMPM to restart the app. AMPM closes the app and launches its launchCommand again.
+		/// </summary>
+		public static void Restart()
+		{
+			UdpEvent("restart");
+		}
+
+		/// <summary>
 		/// Log a usage event.
 		/// </summary>
 		/// <param name="category"></param>
@@ -139,7 +231,25 @@ namespace AmpmLib
 
 		private static void LogMessage(EventLevel eventLevel, string message)
 		{
-			UdpEvent("log", new { level = ToServerName(eventLevel), message = message });
+			// Short reference ID that ties the AMPM log entry to the full local copy in Player.log,
+			// so the complete message can still be found if the AMPM copy is trimmed.
+			// Debug.Log (not LogError) so the local copy doesn't pop the in-game console or get
+			// re-forwarded if Unity's own errors are ever routed to AMPM.
+			string refId = Guid.NewGuid().ToString("N").Substring(0, 8);
+			string level = ToServerName(eventLevel);
+			Debug.Log("[AMPM ref " + refId + "] " + level + ": " + message);
+
+			string text = "[ref " + refId + "] " + message;
+			int maxLength = MaxPayloadLength("log");
+			if (SerializeLog(level, text).Length > maxLength)
+				text = AmpmLogTrimmer.Trim(text, candidate => SerializeLog(level, candidate).Length <= maxLength);
+
+			Send("log", SerializeLog(level, text));
+		}
+
+		private static string SerializeLog(string level, string message)
+		{
+			return JsonConvert.SerializeObject(new { level = level, message = message }, JsonSettings);
 		}
 
 		private static string ToServerName(EventLevel level)
@@ -186,22 +296,78 @@ namespace AmpmLib
 
 		public static void UdpEvent(string name, object data = null)
 		{
-			name = "/" + name;
-			if (_OscSend == null)
+			string payload = data == null ? "" : JsonConvert.SerializeObject(data, JsonSettings);
+			if (payload.Length > MaxPayloadLength(name))
 			{
-				Debug.LogError("Can't send OSC messages to AMPM. Client doesn't exist.");
+				Debug.LogWarning("AMPM: '" + name + "' message is too large to send (" + payload.Length + " characters) and was skipped.");
 				return;
 			}
 
-			if (data == null)
+			Send(name, payload);
+		}
+
+		private static bool Send(string name, string payload)
+		{
+			if (!_Initialized)
 			{
-				_OscSend.Send(name, "");
+				if (!_WarnedNotInitialized)
+				{
+					_WarnedNotInitialized = true;
+					Debug.LogWarning("AMPM: '" + name + "' wasn't sent because AMPM isn't initialized. Add the AMPM prefab (AMPMManager) to your first scene, or call AMPM.Initialize. Later messages sent before initialization are skipped without a warning.");
+				}
+				return false;
 			}
-			else
+
+			try
 			{
-				string d = JsonConvert.SerializeObject(data);
-				_OscSend.Send(name, d);
+				lock (_SendLock)
+				{
+					// Closed by another thread (e.g. on quit) since the check above.
+					if (_OscSend == null)
+						return false;
+					_OscSend.Send("/" + name, payload);
+				}
+				return true;
 			}
+			catch (Exception ex)
+			{
+				ReportSendFailure(name, ex);
+				return false;
+			}
+		}
+
+		// A failing send can repeat every frame (the heartbeat), so warn at most once per WarningInterval.
+		private static void ReportSendFailure(string name, Exception ex)
+		{
+			string suppressed;
+			lock (_WarningLock)
+			{
+				DateTime now = DateTime.UtcNow;
+				if (now - _LastSendWarning < WarningInterval)
+				{
+					_SuppressedSendWarnings++;
+					return;
+				}
+
+				suppressed = _SuppressedSendWarnings > 0 ? " (" + _SuppressedSendWarnings + " more failures since the last warning)" : "";
+				_LastSendWarning = now;
+				_SuppressedSendWarnings = 0;
+			}
+
+			Debug.LogWarning("AMPM: couldn't send '" + name + "' to " + _Settings.host + ":" + _Settings.sendPort + ". " + ex.Message + suppressed);
+		}
+
+		// The longest payload that fits in one OscJack packet alongside the address and type tag.
+		private static int MaxPayloadLength(string name)
+		{
+			int addressBytes = Align4(name.Length + 2); // "/" + name + null terminator
+			const int typeTagBytes = 4;                 // ",s" + null terminator
+			return OscBufferSize - addressBytes - typeTagBytes - 1; // - 1 for the payload's null terminator
+		}
+
+		private static int Align4(int length)
+		{
+			return (length + 3) & ~3;
 		}
 
 		private static void Server_MessageReceived(string address, OscDataHandle oscData)
@@ -239,7 +405,7 @@ namespace AmpmLib
 			public string Label;
 			public int Value;
 		}
-			
+
 	}
 
 
