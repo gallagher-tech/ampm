@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using UnityOSC;
+using OscJack;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.IO;
@@ -28,7 +28,10 @@ namespace AmpmLib
 		public static event EventHandler<Tuple<string, JToken>> OnAmpmMessage;
 
         // The OSC server to receive OSC messages.
-		private static readonly OSCServer _OscReceive;
+		private static OscServer _OscReceive;
+
+		// The OSC client to send OSC messages to the local node.js server.
+		private static OscClient _OscSend;
 
 		// The destination for OSC messages to the local node.js server.
 		private static IPAddress ipAddress;
@@ -39,13 +42,31 @@ namespace AmpmLib
 		static AMPM()
 		{
 			// Create a OSC Reciever to receive UDP messages
-			_OscReceive = OSCHandler.Instance.CreateServer("AMPM", 3003);
+			_OscReceive = new OscServer(3003);
 
-			// Handle incoming OSC messages.
-			_OscReceive.PacketReceivedEvent += Server_MessageReceived;
+			// Handle incoming OSC messages. An empty address receives every message.
+			_OscReceive.MessageDispatcher.AddCallback(string.Empty, Server_MessageReceived);
 
 			ipAddress = GetLocalIPAddress();
-            OSCHandler.Instance.CreateClient ("AMPM", ipAddress, 3002); // Creating a client to send messages on
+            _OscSend = new OscClient(ipAddress.ToString(), 3002); // Creating a client to send messages on
+
+			// Close the client and server when the app quits (or play mode stops in the editor).
+			Application.quitting += CloseOsc;
+		}
+
+		private static void CloseOsc()
+		{
+			if (_OscSend != null)
+			{
+				_OscSend.Dispose();
+				_OscSend = null;
+			}
+
+			if (_OscReceive != null)
+			{
+				_OscReceive.Dispose();
+				_OscReceive = null;
+			}
 		}
 
         public static IPAddress GetLocalIPAddress()
@@ -156,26 +177,32 @@ namespace AmpmLib
 		public static void UdpEvent(string name, object data = null)
 		{
 			name = "/" + name;
+			if (_OscSend == null)
+			{
+				Debug.LogError("Can't send OSC messages to AMPM. Client doesn't exist.");
+				return;
+			}
+
 			if (data == null)
 			{
-				OSCHandler.Instance.SendMessageToClient("AMPM",name, "");
+				_OscSend.Send(name, "");
 			}
 			else
 			{
 				string d = JsonConvert.SerializeObject(data);
-				OSCHandler.Instance.SendMessageToClient("AMPM",name, d);
+				_OscSend.Send(name, d);
 			}
 		}
 
-		private static void Server_MessageReceived(OSCServer sender, OSCPacket e)
+		private static void Server_MessageReceived(string address, OscDataHandle oscData)
 		{
 			if (OnAmpmMessage == null)
 			{
 				return;
 			}
 
-			string name = e.Address.Replace("/", string.Empty);
-			string json = e.Data.FirstOrDefault() as string;
+			string name = address.Replace("/", string.Empty);
+			string json = oscData.GetElementCount() > 0 ? oscData.GetElementAsString(0) : null;
 			JToken data = null;
 			if (json != null)
 			{
