@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 3125784102937415902}
   - component: {fileID: 3125784102937415903}
   m_Layer: 0
-  m_Name: AMPM
+  m_Name: AMPMManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -54,7 +54,4 @@ MonoBehaviour:
   usePortsFromConfig: 1
   waitForConfigBeforeHeartbeat: 0
   maxWaitSeconds: 10
-  enforceRunInBackground: 1
-  enforceFullscreen: 1
-  fullscreenMode: 1
   runInEditor: 0

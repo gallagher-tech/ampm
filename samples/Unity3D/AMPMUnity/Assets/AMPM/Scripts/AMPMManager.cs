@@ -44,19 +44,6 @@ namespace AmpmLib
 		[SerializeField]
 		private float maxWaitSeconds = 10f;
 
-		[Header("Player Settings")]
-		[Tooltip("Keep the app running when its window loses focus. Without this, Unity pauses, the heartbeat stops and AMPM restarts the app.")]
-		[SerializeField]
-		private bool enforceRunInBackground = true;
-
-		[Tooltip("Switch the window to the Fullscreen Mode below when the app starts.")]
-		[SerializeField]
-		private bool enforceFullscreen = true;
-
-		[Tooltip("Full Screen Window (borderless) is recommended for kiosks.")]
-		[SerializeField]
-		private FullScreenMode fullscreenMode = FullScreenMode.FullScreenWindow;
-
 		[Header("Editor")]
 		[Tooltip("Connect to AMPM in Play mode in the Editor. Off by default, so working in the Editor doesn't send heartbeats or request the config.")]
 		[SerializeField]
@@ -111,7 +98,7 @@ namespace AmpmLib
 				return;
 			}
 
-			ApplyPlayerSettings();
+			WarnIfNotRunningInBackground();
 			AMPM.Initialize(connection);
 
 			_heartbeatStarted = !(loadConfig && waitForConfigBeforeHeartbeat);
@@ -277,17 +264,16 @@ namespace AmpmLib
 			}
 		}
 
-		// Player-only settings: in the Editor they would change the Editor's behavior, not the build's.
-		private void ApplyPlayerSettings()
+		// Without Run In Background, Unity pauses whenever the window loses focus, the heartbeat stops,
+		// and AMPM restarts an app that was working fine. The project's Player Settings decide; this
+		// only makes sure nobody misses it.
+		private static void WarnIfNotRunningInBackground()
 		{
-			if (Application.isEditor)
+			if (Application.runInBackground)
 				return;
 
-			if (enforceRunInBackground)
-				Application.runInBackground = true;
-
-			if (enforceFullscreen)
-				Screen.fullScreenMode = fullscreenMode;
+			Debug.LogError("AMPM WARNING: Player Setting \"Run In Background\" is OFF. AMPM may restart the app whenever it loses focus, "
+				+ "because Unity pauses and stops sending heartbeats. Turn it on in Edit > Project Settings > Player > Resolution and Presentation > Run In Background.");
 		}
 
 		// Statics survive between play sessions when the domain reload is skipped.
