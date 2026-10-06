@@ -56,7 +56,10 @@ namespace AmpmLib
 		// OscJack's client isn't thread-safe, so sending and closing are serialized on this lock.
 		private static readonly object _SendLock = new object();
 
-		private static Queue<Tuple<string, object>> _MessageQueue = new Queue<Tuple<string, object>>();
+		// Messages from AMPM arrive on OscJack's background thread; they wait here until
+		// ProcessMessages delivers them on the main thread. Capped so it can't grow forever.
+		private const int MaxQueuedMessages = 1000;
+		private static readonly Queue<Tuple<string, JToken>> _MessageQueue = new Queue<Tuple<string, JToken>>();
 
 		// Rate limiting for the send-failure warning.
 		private static readonly object _WarningLock = new object();
@@ -127,7 +130,8 @@ namespace AmpmLib
 			OnConfigLoaded = null;
 			ConfigLoaded = null;
 			OnAmpmMessage = null;
-			_MessageQueue.Clear();
+			lock (_MessageQueue)
+				_MessageQueue.Clear();
 			_LastSendWarning = DateTime.MinValue;
 			_SuppressedSendWarnings = 0;
 			_WarnedNotInitialized = false;
@@ -370,6 +374,36 @@ namespace AmpmLib
 			return (length + 3) & ~3;
 		}
 
+		/// <summary>
+		/// Delivers messages received from AMPM to <see cref="OnAmpmMessage"/> on the calling thread.
+		/// AMPMManager calls this every frame; call it from Update yourself if you don't use AMPMManager.
+		/// </summary>
+		public static void ProcessMessages()
+		{
+			List<Tuple<string, JToken>> messages;
+			lock (_MessageQueue)
+			{
+				if (_MessageQueue.Count == 0)
+					return;
+				messages = new List<Tuple<string, JToken>>(_MessageQueue);
+				_MessageQueue.Clear();
+			}
+
+			foreach (Tuple<string, JToken> message in messages)
+			{
+				try
+				{
+					OnAmpmMessage?.Invoke(null, message);
+				}
+				catch (Exception ex)
+				{
+					// One failing handler shouldn't stop the remaining messages from being delivered.
+					Debug.LogException(ex);
+				}
+			}
+		}
+
+		// Runs on OscJack's background thread: parse the message and queue it for ProcessMessages.
 		private static void Server_MessageReceived(string address, OscDataHandle oscData)
 		{
 			if (OnAmpmMessage == null)
@@ -395,7 +429,15 @@ namespace AmpmLib
 				}
 			}
 
-					OnAmpmMessage(null, new Tuple<string, JToken>(name, data));
+			lock (_MessageQueue)
+			{
+				if (_MessageQueue.Count >= MaxQueuedMessages)
+				{
+					// Nothing is calling ProcessMessages; drop the oldest message.
+					_MessageQueue.Dequeue();
+				}
+				_MessageQueue.Enqueue(new Tuple<string, JToken>(name, data));
+			}
 		}
 
 		private class TrackEvent
