@@ -6,7 +6,6 @@ using System.Net.Sockets;
 using OscJack;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.IO;
 
 
 namespace AmpmLib
@@ -33,12 +32,31 @@ namespace AmpmLib
 			StringEscapeHandling = StringEscapeHandling.EscapeNonAscii
 		};
 
-		public delegate void ConfigLoadHandler();
-		public static event ConfigLoadHandler OnConfigLoaded;
+		/// <summary>
+		/// The config downloaded from AMPM (the merged contents of its ampm.json), or null until it arrives.
+		/// </summary>
+		public static JObject Config { get; private set; }
 
-		private static JObject _Config = null;
+		private static EventHandler<JObject> _ConfigLoaded;
 
-		public static event EventHandler<JObject> ConfigLoaded; //<JObject>
+		/// <summary>
+		/// Raised on the main thread when the config arrives. Subscribing after it has arrived
+		/// delivers the config immediately, so no subscriber misses it.
+		/// </summary>
+		public static event EventHandler<JObject> ConfigLoaded
+		{
+			add
+			{
+				_ConfigLoaded += value;
+				if (Config != null)
+					value?.Invoke(null, Config);
+			}
+			remove
+			{
+				_ConfigLoaded -= value;
+			}
+		}
+
 		public static event EventHandler<Tuple<string, JToken>> OnAmpmMessage;
 
 		// The settings passed to Initialize.
@@ -126,9 +144,8 @@ namespace AmpmLib
 		{
 			Close();
 			_Settings = null;
-			_Config = null;
-			OnConfigLoaded = null;
-			ConfigLoaded = null;
+			Config = null;
+			_ConfigLoaded = null;
 			OnAmpmMessage = null;
 			lock (_MessageQueue)
 				_MessageQueue.Clear();
@@ -171,37 +188,34 @@ namespace AmpmLib
 			throw new Exception("No IPv4 address found for host '" + host + "'.");
 		}
 
-        public static void GetConfig(string url = null) {
-			if (url == null)
-			{
-				AmpmSettings settings = _Settings ?? new AmpmSettings();
-				url = "http://" + settings.host + ":" + settings.configPort + "/config";
-			}
+		/// <summary>
+		/// Stores the config and raises <see cref="ConfigLoaded"/>. AMPMManager calls this after
+		/// downloading the config; call it on the main thread.
+		/// </summary>
+		public static void SetConfig(JObject config)
+		{
+			Config = config;
+			_ConfigLoaded?.Invoke(null, config);
+		}
 
-			try
-			{
-                // load the url
-                string strContent;
-                var webRequest = WebRequest.Create(@url);
-                using (var response = webRequest.GetResponse())
-                using (var content = response.GetResponseStream())
-                using (var reader = new StreamReader(content))
-                {
-                    strContent = reader.ReadToEnd();
-                }
+		// The settings in use, or null before Initialize. Used by AMPMManager to compare ports.
+		internal static AmpmSettings CurrentSettings
+		{
+			get { return _Initialized ? _Settings.Clone() : null; }
+		}
 
-                // parse it as json
-                _Config = JObject.Parse(strContent);
+		// Reconnects on different ports, e.g. the ones listed in AMPM's config.
+		internal static void ChangePorts(int sendPort, int listenPort)
+		{
+			if (!_Initialized)
+				return;
 
-                // fire OnConfigLoaded
-                if (OnConfigLoaded != null)
-                    OnConfigLoaded();
-            }
-			catch (Exception e)
-			{
+			AmpmSettings settings = _Settings.Clone();
+			settings.sendPort = sendPort;
+			settings.listenPort = listenPort;
 
-				throw;
-			}
+			Close();
+			Initialize(settings);
 		}
 
 		/// <summary>

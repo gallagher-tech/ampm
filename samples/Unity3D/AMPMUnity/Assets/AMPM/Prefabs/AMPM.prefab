@@ -50,6 +50,10 @@ MonoBehaviour:
     listenForMessages: 0
     listenPort: 3003
     configPort: 8888
+  loadConfig: 1
+  usePortsFromConfig: 1
+  waitForConfigBeforeHeartbeat: 0
+  maxWaitSeconds: 10
   enforceRunInBackground: 1
   enforceFullscreen: 1
   fullscreenMode: 1
