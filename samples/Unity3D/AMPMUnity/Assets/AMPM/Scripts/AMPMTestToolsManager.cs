@@ -369,6 +369,7 @@ namespace AmpmLib
 		// ---- Appearance ----
 
 		private static readonly Color Border = new Color(0.9f, 0.2f, 0.14f);
+		private static readonly Color ButtonFill = new Color32(0x80, 0x80, 0x80, 0xFF); // #808080 in both modes.
 		private const float BorderWidth = 3f;
 
 		// Applies light or dark mode to every panel, button and text in the prefab. Each Image is a
@@ -376,13 +377,14 @@ namespace AmpmLib
 		// "...Explanation" are secondary text, every other Text is primary.
 		private void ApplyTheme()
 		{
-			Color fill = isDarkMode ? new Color(0.1f, 0.1f, 0.1f) : Color.white;
+			Color panelFill = isDarkMode ? new Color(0.1f, 0.1f, 0.1f) : Color.white;
 			Color primary = isDarkMode ? Color.white : Color.black;
 			Color secondary = isDarkMode ? new Color(0.75f, 0.75f, 0.75f) : new Color(0.3f, 0.3f, 0.3f);
 
 			foreach (Image image in GetComponentsInChildren<Image>(true))
 			{
-				SetColor(image, fill);
+				var button = image.GetComponent<Button>();
+				SetColor(image, button != null ? ButtonFill : panelFill);
 
 				var outline = image.GetComponent<Outline>();
 				if (outline != null && (outline.effectColor != Border || outline.effectDistance != new Vector2(BorderWidth, -BorderWidth)))
@@ -392,17 +394,15 @@ namespace AmpmLib
 					MarkChanged(outline);
 				}
 
-				var button = image.GetComponent<Button>();
 				if (button != null)
 				{
-					// The tint multiplies the fill (and its border). A near-black fill can't be
-					// darkened, so dark mode tints at half and doubles: hover and press brighten it.
+					// The tint multiplies the fill (and its border): hover and press darken the gray.
 					ColorBlock colors = button.colors;
-					colors.normalColor = colors.selectedColor = Gray(isDarkMode ? 0.5f : 1f);
-					colors.highlightedColor = Gray(isDarkMode ? 1f : 0.92f);
-					colors.pressedColor = Gray(isDarkMode ? 0.75f : 0.82f);
-					colors.disabledColor = isDarkMode ? new Color(0.5f, 0.5f, 0.5f, 0.25f) : new Color(1f, 1f, 1f, 0.5f);
-					colors.colorMultiplier = isDarkMode ? 2f : 1f;
+					colors.normalColor = colors.selectedColor = Color.white;
+					colors.highlightedColor = Gray(0.85f);
+					colors.pressedColor = Gray(0.7f);
+					colors.disabledColor = new Color(1f, 1f, 1f, 0.5f);
+					colors.colorMultiplier = 1f;
 					if (colors != button.colors)
 					{
 						button.colors = colors;
