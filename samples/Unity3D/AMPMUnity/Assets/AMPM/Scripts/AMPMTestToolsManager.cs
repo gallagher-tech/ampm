@@ -369,7 +369,6 @@ namespace AmpmLib
 		// ---- Appearance ----
 
 		private static readonly Color Border = new Color(0.9f, 0.2f, 0.14f);
-		private static readonly Color ButtonFill = new Color32(0x80, 0x80, 0x80, 0xFF); // #808080 in both modes.
 		private const float BorderWidth = 3f;
 
 		// Applies light or dark mode to every panel, button and text in the prefab. Each Image is a
@@ -378,13 +377,14 @@ namespace AmpmLib
 		private void ApplyTheme()
 		{
 			Color panelFill = isDarkMode ? new Color(0.1f, 0.1f, 0.1f) : Color.white;
+			Color buttonFill = isDarkMode ? new Color32(0x40, 0x40, 0x40, 0xFF) : new Color32(0xBF, 0xBF, 0xBF, 0xFF);
 			Color primary = isDarkMode ? Color.white : Color.black;
 			Color secondary = isDarkMode ? new Color(0.75f, 0.75f, 0.75f) : new Color(0.3f, 0.3f, 0.3f);
 
 			foreach (Image image in GetComponentsInChildren<Image>(true))
 			{
 				var button = image.GetComponent<Button>();
-				SetColor(image, button != null ? ButtonFill : panelFill);
+				SetColor(image, button != null ? buttonFill : panelFill);
 
 				var outline = image.GetComponent<Outline>();
 				if (outline != null && (outline.effectColor != Border || outline.effectDistance != new Vector2(BorderWidth, -BorderWidth)))
