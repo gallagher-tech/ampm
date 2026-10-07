@@ -43,10 +43,10 @@ namespace AmpmLib
 		[SerializeField]
 		private float countdownSeconds = 3f;
 
-		[Header("Layout")]
-		[Tooltip("The app runs in portrait: lay the test UI out for 1080 x 1920 instead of 1920 x 1080. It scales to the actual screen either way (e.g. 2x on 4K).")]
+		[Header("Appearance")]
+		[Tooltip("Dark: near-black panels and buttons with white text. Off (light): white with black text. Both have a red border.")]
 		[SerializeField]
-		private bool isPortraitOrientation = false;
+		private bool isDarkMode = false;
 
 		[Header("UI")]
 		[SerializeField] private GameObject openButton;
@@ -90,6 +90,17 @@ namespace AmpmLib
 		// The window (open button, menu or countdown) being dragged.
 		private RectTransform _dragged;
 
+		// Sizing, "readable first": the UI grows with the screen as the prefab's Canvas Scaler would
+		// (2x on 4K) but never shrinks below its design size, so its text stays legible in a small
+		// window (e.g. a preview window), unless it has to shrink to fit the window at all.
+		private const float ScreenMargin = 16f; // Screen pixels kept free around the largest window.
+		private CanvasScaler _scaler;
+		private Vector2 _referenceResolution;
+		private float _match;
+		private Vector2 _largestWindow; // The largest of the three windows, in design pixels.
+		private Vector2Int _scaledFor;
+		private bool _keepWindowsOnScreen;
+
 		private void Awake()
 		{
 			// Only one: loading a scene again would otherwise add another.
@@ -104,8 +115,6 @@ namespace AmpmLib
 				transform.SetParent(null);
 			DontDestroyOnLoad(gameObject);
 
-			ApplyOrientation();
-
 			if (!Debug.isDebugBuild && !allowInReleaseBuilds)
 			{
 				// Release build: stay out of the way entirely.
@@ -113,6 +122,8 @@ namespace AmpmLib
 				return;
 			}
 
+			ApplyTheme();
+			SetUpScaling();
 			ShowClosed();
 		}
 
@@ -135,6 +146,17 @@ namespace AmpmLib
 
 		private void Update()
 		{
+			if (_keepWindowsOnScreen)
+			{
+				// A frame after a scale change, once the canvas has its new size.
+				_keepWindowsOnScreen = false;
+				foreach (GameObject window in new[] { openButton, menuPanel, countdownPanel })
+					KeepOnScreen((RectTransform)window.transform);
+			}
+
+			if (_scaler != null && (Screen.width != _scaledFor.x || Screen.height != _scaledFor.y))
+				UpdateScale();
+
 			if (_pending == Action.None)
 				return;
 
@@ -344,17 +366,143 @@ namespace AmpmLib
 			return action == Action.Restart ? "Asking AMPM to restart" : action == Action.Crash ? "Crashing" : "Freezing forever";
 		}
 
-		// Keeps the prefab's preview in the Editor in step with the checkbox.
-		private void OnValidate()
+		// ---- Appearance ----
+
+		private static readonly Color Border = new Color(0.9f, 0.2f, 0.14f);
+		private const float BorderWidth = 3f;
+
+		// Applies light or dark mode to every panel, button and text in the prefab. Each Image is a
+		// panel or a button (with an Outline as its red border); Texts named "...Subtitle" or
+		// "...Explanation" are secondary text, every other Text is primary.
+		private void ApplyTheme()
 		{
-			ApplyOrientation();
+			Color fill = isDarkMode ? new Color(0.1f, 0.1f, 0.1f) : Color.white;
+			Color primary = isDarkMode ? Color.white : Color.black;
+			Color secondary = isDarkMode ? new Color(0.75f, 0.75f, 0.75f) : new Color(0.3f, 0.3f, 0.3f);
+
+			foreach (Image image in GetComponentsInChildren<Image>(true))
+			{
+				SetColor(image, fill);
+
+				var outline = image.GetComponent<Outline>();
+				if (outline != null && (outline.effectColor != Border || outline.effectDistance != new Vector2(BorderWidth, -BorderWidth)))
+				{
+					outline.effectColor = Border;
+					outline.effectDistance = new Vector2(BorderWidth, -BorderWidth);
+					MarkChanged(outline);
+				}
+
+				var button = image.GetComponent<Button>();
+				if (button != null)
+				{
+					// The tint multiplies the fill (and its border). A near-black fill can't be
+					// darkened, so dark mode tints at half and doubles: hover and press brighten it.
+					ColorBlock colors = button.colors;
+					colors.normalColor = colors.selectedColor = Gray(isDarkMode ? 0.5f : 1f);
+					colors.highlightedColor = Gray(isDarkMode ? 1f : 0.92f);
+					colors.pressedColor = Gray(isDarkMode ? 0.75f : 0.82f);
+					colors.disabledColor = isDarkMode ? new Color(0.5f, 0.5f, 0.5f, 0.25f) : new Color(1f, 1f, 1f, 0.5f);
+					colors.colorMultiplier = isDarkMode ? 2f : 1f;
+					if (colors != button.colors)
+					{
+						button.colors = colors;
+						MarkChanged(button);
+					}
+				}
+			}
+
+			foreach (Text text in GetComponentsInChildren<Text>(true))
+			{
+				bool isSecondary = text.name.EndsWith("Subtitle") || text.name.EndsWith("Explanation");
+				SetColor(text, isSecondary ? secondary : primary);
+			}
 		}
 
-		private void ApplyOrientation()
+		private static Color Gray(float value)
 		{
-			var scaler = GetComponent<CanvasScaler>();
-			if (scaler != null)
-				scaler.referenceResolution = isPortraitOrientation ? new Vector2(1080f, 1920f) : new Vector2(1920f, 1080f);
+			return new Color(value, value, value, 1f);
+		}
+
+		private static void SetColor(Graphic graphic, Color color)
+		{
+			if (graphic.color == color)
+				return;
+			graphic.color = color;
+			MarkChanged(graphic);
+		}
+
+		// Changes made in the Editor (from OnValidate) are saved with the prefab or scene.
+		private static void MarkChanged(Object changed)
+		{
+#if UNITY_EDITOR
+			if (!Application.isPlaying)
+				UnityEditor.EditorUtility.SetDirty(changed);
+#endif
+		}
+
+#if UNITY_EDITOR
+		// Shows the chosen mode in the Editor straight away. Deferred: UI components shouldn't be
+		// changed from inside OnValidate itself.
+		private void OnValidate()
+		{
+			UnityEditor.EditorApplication.delayCall += () =>
+			{
+				if (this != null && !Application.isPlaying)
+					ApplyTheme();
+			};
+		}
+#endif
+
+		// ---- Sizing ----
+
+		private void SetUpScaling()
+		{
+			_scaler = GetComponent<CanvasScaler>();
+			if (_scaler == null)
+				return;
+
+			// The prefab's Canvas Scaler (Scale With Screen Size) describes the design; from here on
+			// the scale is set directly.
+			_referenceResolution = _scaler.referenceResolution;
+			_match = _scaler.matchWidthOrHeight;
+			_scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+
+			// Measure each window at its laid-out size (the menu and countdown size to their content).
+			_largestWindow = Vector2.zero;
+			foreach (GameObject window in new[] { openButton, menuPanel, countdownPanel })
+			{
+				bool wasActive = window.activeSelf;
+				window.SetActive(true);
+				var rect = (RectTransform)window.transform;
+				LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
+				_largestWindow = Vector2.Max(_largestWindow, rect.rect.size);
+				window.SetActive(wasActive);
+			}
+
+			UpdateScale();
+		}
+
+		private void UpdateScale()
+		{
+			int width = Screen.width;
+			int height = Screen.height;
+			_scaledFor = new Vector2Int(width, height);
+			if (width <= 0 || height <= 0)
+				return;
+
+			// What Scale With Screen Size would give (1x on 1080p, 2x on 4K).
+			float logWidth = Mathf.Log(width / _referenceResolution.x, 2f);
+			float logHeight = Mathf.Log(height / _referenceResolution.y, 2f);
+			float screenScale = Mathf.Pow(2f, Mathf.Lerp(logWidth, logHeight, _match));
+
+			// The most the largest window can be scaled and still fit on screen.
+			float fit = float.MaxValue;
+			if (_largestWindow.x > 0f && _largestWindow.y > 0f)
+				fit = Mathf.Min((width - 2f * ScreenMargin) / _largestWindow.x, (height - 2f * ScreenMargin) / _largestWindow.y);
+
+			// Grow with the screen, never below design size, never bigger than fits.
+			_scaler.scaleFactor = Mathf.Max(0.1f, Mathf.Min(Mathf.Max(screenScale, 1f), fit));
+			_keepWindowsOnScreen = true;
 		}
 
 		private void ShowClosed()
